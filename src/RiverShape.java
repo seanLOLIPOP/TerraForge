@@ -1,0 +1,12 @@
+/** Coherent world-scale river geometry: terrain routing, channel constrictions, and unequal banks. */
+final class RiverShape {
+ static double height(float[] h,int n,double x,double z){x=Math.max(0,Math.min(n-1,x));z=Math.max(0,Math.min(n-1,z));int ix=(int)x,iz=(int)z,jx=Math.min(n-1,ix+1),jz=Math.min(n-1,iz+1);double fx=x-ix,fz=z-iz;return (h[iz*n+ix]*(1-fx)+h[iz*n+jx]*fx)*(1-fz)+(h[jz*n+ix]*(1-fx)+h[jz*n+jx]*fx)*fz;}
+ static double terrainOffset(float[] h,int n,double x,double z,double nx,double nz,double radius,double block,double desired,double follow){
+  if(follow<=0)return desired;double reach=Math.max(radius*3,32/block),best=Double.POSITIVE_INFINITY;double[] scores=new double[17],offsets=new double[17];
+  for(int k=0;k<17;k++){double offset=-reach+2*reach*k/16,xx=x+nx*offset,zz=z+nz*offset,center=height(h,n,xx,zz),left=height(h,n,xx+nx*radius,zz+nz*radius),right=height(h,n,xx-nx*radius,zz-nz*radius);double terrain=center*.8+(left+right)*.1+Math.max(0,Math.max(left,right)-center-6)*.2;double barrier=Math.max(height(h,n,x+nx*offset*.25,z+nz*offset*.25),Math.max(height(h,n,x+nx*offset*.5,z+nz*offset*.5),height(h,n,x+nx*offset*.75,z+nz*offset*.75))),crossing=Math.max(0,barrier-height(h,n,x,z)-2);double score=terrain+crossing*2+Math.abs(offset-desired)*block*.12;offsets[k]=offset;scores[k]=score;best=Math.min(best,score);}
+  double weighted=0,total=0;for(int k=0;k<17;k++){double weight=Math.exp(-(scores[k]-best)/1.2);weighted+=offsets[k]*weight;total+=weight;}return desired*(1-follow)+weighted/total*follow;
+ }
+ static double widthFactor(double arcBlocks,double radiusBlocks,double variation,long seed,double confinement){double scale=Math.max(96,radiusBlocks*12),broad=TerraForge.sample(arcBlocks/scale,.17,seed+1301)*2-1,fine=TerraForge.sample(arcBlocks/(scale*.43),.71,seed+1877)*2-1;return Math.max(.5,Math.min(1.65,(1+variation*(broad*.8+fine*.2))*(1-.2*confinement)));}
+ static double traceBankFactor(double arcBlocks,double side,double variation,long seed){double a=TerraForge.sample(arcBlocks/150,.23,seed+(side<0?2503:3301));return 1+variation*(a*1.4-.7);}
+ static double bankFactor(double x,double z,double outwardX,double outwardZ,double variation,long seed){double length=Math.hypot(outwardX,outwardZ),side=length<.0001?.5:.5+.5*(outwardX*.8+outwardZ*.6)/length;double a=TerraForge.sample(x/145,z/145,seed+4013),b=TerraForge.sample(x/145,z/145,seed+5449),fine=TerraForge.sample(x/55,z/55,seed+6481);return Math.max(.5,1+variation*((a*side+b*(1-side))*1.6+fine*.4-1));}
+}

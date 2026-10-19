@@ -1,0 +1,10 @@
+import java.util.*;import java.util.function.BooleanSupplier;
+/** Short snowmelt rills on gentle upper ridges; stop rather than cross a steep face. */
+final class AlpineStreams{
+ static void generate(TerrainGraph.Node node,EnvironmentMap e,float[] h,EnvironmentNodes.Drainage flow,int n,int size,int sea,long seed,BooleanSupplier stop){
+  int wanted=(int)node.p("alpineStreams");if(wanted==0||e.ribbons==null)return;double block=size/(double)n,peak=sea;for(float v:h)peak=Math.max(peak,v);var sources=new ArrayList<Integer>();for(int z=2;z<n-2;z++)for(int x=2;x<n-2;x++){int i=z*n+x;if(h[i]>sea+(peak-sea)*.72&&RiverCourse.terrainSlope(h,n,x,z,block)<=node.p("maxSlope"))sources.add(i);}sources.sort(Comparator.<Integer>comparingDouble(i->h[i]).reversed());
+  var roots=new ArrayList<RiverRibbon.Point>();var arms=new ArrayList<MountainRiverForks.Arm>(e.mountainArms);var forks=new ArrayList<MountainRiverForks.Fork>(e.mountainForks);var tails=new ArrayList<RiverRibbon.SideBranch>(e.ribbons.sideBranches);var segments=new ArrayList<RiverRibbon.Segment>(e.ribbons.segments);double highest=0;
+  for(int i:sources){if(roots.size()>=wanted)break;EnvironmentNodes.cancel(stop);double x=(i%n)*block,z=(i/n)*block;boolean near=false;for(var p:roots)if(Math.hypot(x-p.x(),z-p.z())<512)near=true;if(near||RiverSideBranches.clearance(e.ribbons,x,z)<24)continue;double dx=RiverShape.height(h,n,i%n+1,i/n)-RiverShape.height(h,n,i%n-1,i/n),dz=RiverShape.height(h,n,i%n,i/n+1)-RiverShape.height(h,n,i%n,i/n-1);double heading=Math.atan2(-dz,-dx);var p=new RiverRibbon.Point(x,z,1.1,Math.floor(h[i]),1);var builder=new MountainRiverForks.Builder(h,flow.level(),n,size,sea,node.p("maxSlope"),seed+i*713L,e.ribbons,stop);var tree=builder.grow(p,heading,192,1.1,3);if(tree==null)continue;roots.add(p);highest=Math.max(highest,p.water());MountainRiverForks.emit(tree,0,segments,arms,tails,forks);
+  }e.ribbons=new RiverRibbon.Network(segments,e.ribbons.cutoffs,e.ribbons.splitDensity,tails);e.mountainArms=List.copyOf(arms);e.mountainForks=List.copyOf(forks);System.out.println("ALPINE_STREAMS: "+roots.size()+" upper mountain sources; highest raw water="+highest);
+ }
+}
