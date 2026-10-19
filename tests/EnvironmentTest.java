@@ -1,0 +1,46 @@
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+
+public class EnvironmentTest {
+    static void check(boolean ok,String label){if(!ok)throw new AssertionError(label);}
+    static TerrainGraph.Node node(TerrainGraph.Type t){return new TerrainGraph.Node(1,t,0,0);}
+    static EnvironmentMap apply(TerrainGraph.Type t,EnvironmentMap b,EnvironmentMap climate){return EnvironmentNodes.apply(node(t),b,climate,64,64,63,2024,()->false);}
+    static int count(byte[] data,int value){int n=0;if(data!=null)for(byte v:data)if(v==value)n++;return n;}
+    static void bounded(EnvironmentMap e){for(float h:e.height)check(Float.isFinite(h)&&h>=-60&&h<=300,"terrain bounded");for(float[] map:new float[][]{e.snow,e.temperature,e.rain,e.river})if(map!=null)for(float f:map)check(Float.isFinite(f)&&f>=0&&f<=1,"normalized channel");}
+    public static void main(String[] args)throws Exception {
+        int n=64;float[] h=new float[n*n];for(int z=0;z<n;z++)for(int x=0;x<n;x++)h[z*n+x]=180-z*2+(float)TerraForge.sample(x*.12,z*.12,2024)*4;
+        EnvironmentMap terrain=new EnvironmentMap(h);float[] original=h.clone();
+        EnvironmentMap ocean=apply(TerrainGraph.Type.OCEAN,terrain,null);check(!Arrays.equals(ocean.height,h),"ocean sculpts seabed");check(Arrays.equals(original,h),"source immutability");
+        EnvironmentMap coast=apply(TerrainGraph.Type.COAST,terrain,null);check(count(coast.material,2)+count(coast.material,3)>0,"coastal surfaces");
+        EnvironmentMap rivers=apply(TerrainGraph.Type.RIVERS,terrain,null);int elevated=0;for(int i=0;i<h.length;i++)if(rivers.river[i]>.1&&rivers.water[i]>63&&rivers.water[i]>rivers.height[i])elevated++;check(elevated>0,"rivers above sea level");
+        var drainage=EnvironmentNodes.drainage(h,n,()->false);for(int start=0;start<h.length;start+=31){int current=start,steps=0;while(current>=0){check(steps++<=h.length,"acyclic drainage");current=drainage.parent()[current];}}
+        EnvironmentMap rapids=apply(TerrainGraph.Type.RAPIDS,rivers,null);check(!Arrays.equals(rivers.water,rapids.water),"waterfall levels stepped");
+        EnvironmentMap flat=new EnvironmentMap(EnvironmentMap.filled(n*n,100));var lakeNode=node(TerrainGraph.Type.LAKE);lakeNode.values.put("random",0.0);lakeNode.values.put("level",120.0);lakeNode.values.put("overflow",0.0);EnvironmentMap lake=EnvironmentNodes.apply(lakeNode,flat,null,n,n,63,1,()->false);int center=32*n+32;check(lake.water[center]==120&&lake.height[center]<120,"elevated lake");check(lake.water[0]==63&&lake.height[0]==100,"lake locality");
+        var climateNode=node(TerrainGraph.Type.CLIMATE);climateNode.values.put("temperature",.2);climateNode.values.put("rain",.9);EnvironmentMap cold=EnvironmentNodes.apply(climateNode,terrain,null,n,n,63,1,()->false);check(cold.temperature[0]<.3&&cold.rain[0]>.6,"climate maps");
+        EnvironmentMap snow=apply(TerrainGraph.Type.SNOW,terrain,cold);check(snow.snow[0]>.1&&snow.snow[h.length-1]==0,"snow altitude and submerged exclusion");
+        EnvironmentMap high=new EnvironmentMap(EnvironmentMap.filled(n*n,180));EnvironmentMap glacier=apply(TerrainGraph.Type.GLACIER,high,cold);check(count(glacier.material,6)>0&&glacier.height[center]>180&&glacier.glacier[center]>0,"glacier ice fills terrain");
+        EnvironmentMap freeze=apply(TerrainGraph.Type.FREEZE,terrain,cold);check(freeze.ice[h.length-1]>0&&freeze.ice[0]==0,"freeze only water");
+        EnvironmentMap marsh=apply(TerrainGraph.Type.WETLAND,terrain,cold);check(count(marsh.material,5)>0&&count(marsh.biome,5)>0,"wetland ground and biome");check(marsh.height[h.length-1]==h[h.length-1],"wetlands preserve deep water");
+        EnvironmentMap sediment=apply(TerrainGraph.Type.SEDIMENT,rivers,null);check(sediment.material!=null&&count(sediment.material,2)+count(sediment.material,5)+count(sediment.material,7)>0,"riverbank deposits");
+        EnvironmentMap biomes=apply(TerrainGraph.Type.BIOMES,freeze,cold);check(count(biomes.biome,8)>0&&count(biomes.biome,4)>0,"frozen ocean and snowy biome");
+        for(EnvironmentMap map:new EnvironmentMap[]{ocean,coast,rivers,rapids,lake,cold,snow,glacier,freeze,marsh,sediment,biomes})bounded(map);
+        for(String name:new String[]{"Coastal watershed","Frozen highlands","Wetland basin"}){var graph=TerrainGraph.template(name);var a=graph.evaluate(64,64,63,2024,graph.output(),()->false);var b=graph.evaluate(64,64,63,2024,graph.output(),()->false);check(Arrays.equals(a.output(),b.output()),"deterministic environment template");check(a.environment().water!=null&&a.environment().biome!=null,"template has environment layers");bounded(a.environment());}
+        // Independently routed, typed output channels.
+        var graph=new TerrainGraph();var constant=graph.add(TerrainGraph.Type.CONSTANT,0,0);constant.values.put("height",100.0);var lakeGraph=graph.add(TerrainGraph.Type.LAKE,0,0);lakeGraph.values.put("random",0.0);lakeGraph.values.put("natural",0.0);lakeGraph.values.put("level",120.0);lakeGraph.values.put("overflow",0.0);graph.connect(constant.id,lakeGraph.id,0);var water=graph.add(TerrainGraph.Type.WATER_LEVEL,0,0);graph.connect(lakeGraph.id,water.id,0);var output=graph.add(TerrainGraph.Type.OUTPUT,0,0);graph.connect(constant.id,output.id,0);graph.connect(water.id,output.id,1);var result=graph.evaluate(64,64,63,1,output.id,()->false);check(result.output()[center]==100&&result.environment().water[center]==120,"independent water output");
+        var climateGraph=graph.add(TerrainGraph.Type.CLIMATE,0,0);climateGraph.values.put("temperature",.1);graph.connect(constant.id,climateGraph.id,0);
+        var snowGraph=graph.add(TerrainGraph.Type.SNOW,0,0);snowGraph.values.put("line",90.0);graph.connect(constant.id,snowGraph.id,0);graph.connect(climateGraph.id,snowGraph.id,1);var snowMap=graph.add(TerrainGraph.Type.SNOW_MASK,0,0);graph.connect(snowGraph.id,snowMap.id,0);graph.connect(snowMap.id,output.id,2);
+        var freezeGraph=graph.add(TerrainGraph.Type.FREEZE,0,0);graph.connect(lakeGraph.id,freezeGraph.id,0);graph.connect(climateGraph.id,freezeGraph.id,1);var iceMap=graph.add(TerrainGraph.Type.ICE_MASK,0,0);graph.connect(freezeGraph.id,iceMap.id,0);graph.connect(iceMap.id,output.id,3);
+        var materialGraph=graph.add(TerrainGraph.Type.MATERIAL_MAP,0,0);graph.connect(lakeGraph.id,materialGraph.id,0);graph.connect(materialGraph.id,output.id,4);
+        var biomeGraph=graph.add(TerrainGraph.Type.BIOMES,0,0);graph.connect(freezeGraph.id,biomeGraph.id,0);graph.connect(climateGraph.id,biomeGraph.id,1);var biomeMap=graph.add(TerrainGraph.Type.BIOME_MAP,0,0);graph.connect(biomeGraph.id,biomeMap.id,0);graph.connect(biomeMap.id,output.id,5);
+        var routed=graph.evaluate(64,64,63,1,output.id,()->false).environment();check(routed.snow[0]>0&&routed.ice[center]==1&&routed.material[center]==2&&routed.biome[center]==9,"all six World output ports");
+        for(var type:new TerrainGraph.Type[]{TerrainGraph.Type.TEMPERATURE,TerrainGraph.Type.RAINFALL}){var extractor=graph.add(type,0,0);graph.connect(climateGraph.id,extractor.id,0);var field=graph.evaluate(64,64,63,1,extractor.id,()->false).output();check(field[0]>=0&&field[0]<=1,"climate extraction");}
+        boolean rejected=false;try{graph.connect(water.id,output.id,2);}catch(IllegalArgumentException expected){rejected=true;}check(rejected,"water cannot enter snow port");
+        // Existing pre-environment graph encoding had one output input and fixed parameters.
+        ByteArrayOutputStream bytes=new ByteArrayOutputStream();try(DataOutputStream d=new DataOutputStream(bytes)){d.writeInt(2);for(var node:new TerrainGraph.Node[]{constant,output}){d.writeInt(node.id);d.writeUTF(node.type.name());d.writeDouble(0);d.writeDouble(0);if(node.type==TerrainGraph.Type.OUTPUT)d.writeInt(constant.id);for(var p:node.type.params)d.writeDouble(node.p(p.key()));}}
+        var legacy=TerrainGraph.read(new DataInputStream(new ByteArrayInputStream(bytes.toByteArray())));check(legacy.nodes.get(output.id).input.length==6&&legacy.evaluate(32,32,63,1,output.id,()->false).output()[0]==100,"legacy graph upgrade");
+        TerraForge.World world=new TerraForge.World(n,63,2024);world.height=glacier.height;world.environment=glacier;world.graph=TerrainGraph.template("Frozen highlands");world.environment.water=lake.water;world.environment.ice=freeze.ice;world.environment.temperature=cold.temperature;world.environment.rain=cold.rain;world.environment.biome=biomes.biome;world.environment.river=rivers.river;
+        Path file=Files.createTempFile("environment-project-",".terra");TerraForge.writeProject(world,file);var restored=TerraForge.readProject(file);check(Arrays.equals(restored.environment.water,world.environment.water)&&Arrays.equals(restored.environment.glacier,world.environment.glacier)&&Arrays.equals(restored.environment.biome,world.environment.biome)&&Arrays.equals(restored.environment.snow,world.environment.snow),"all environment channels round trip");var copy=world.copy();copy.environment.water[0]=150;check(world.environment.water[0]!=150,"environment copy independence");Files.delete(file);
+        System.out.println("PASS: ocean/coast, downhill rivers, elevated lakes, waterfalls, climate, snow, glaciers, freezing, wetlands, sediment, biomes, typed outputs, legacy graphs and environment project persistence");
+    }
+}
