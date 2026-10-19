@@ -1,0 +1,6 @@
+Manifest-Version: 1.0
+Main-Class: TerraForge
+Class-Path: lib/lwjgl-3.3.6-natives-linux.jar lib/lwjgl-3.3.6.jar lib/
+ lwjgl-glfw-3.3.6-natives-linux.jar lib/lwjgl-glfw-3.3.6.jar lib/lwjgl
+ -opengl-3.3.6-natives-linux.jar lib/lwjgl-opengl-3.3.6.jar
+
