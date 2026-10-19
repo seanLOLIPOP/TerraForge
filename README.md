@@ -33,10 +33,6 @@ Bundled LWJGL JARs and their notices are under `lib/`. `build.sh` copies the con
 
 For the included large-island recipe, open `examples/Alpine-Streams-16384-Y1024.tgraph` in Nodes, select 16384 and build. The graph is included; multi-gigabyte generated worlds are not part of the app download.
 
-## Minecraft assets and compatibility
-
-Minecraft game files and textures are not distributed. The Minecraft-style preview can read textures from a user's locally installed Minecraft 1.20.4 client. This project is not affiliated with Mojang or Microsoft.
-
 ## Release status and credits
 
 This is an early desktop release. Back up projects before editing or exporting. See `RELEASE_NOTES.md` for release details and `THIRD_PARTY_NOTICES.md` for bundled dependencies and tree-library attribution. No new license to third-party content is granted by this repository.
