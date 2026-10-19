@@ -1,0 +1,7 @@
+/classes/
+/TerraForge.jar*
+/runtime/
+/dist/
+*.tmp
+*.log
+/large-map-built.png
