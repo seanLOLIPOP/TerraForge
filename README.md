@@ -1,12 +1,16 @@
-# TerraForge v0.1.0
+# TerraForge v0.1.1
 
 Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for Ubuntu.
 
 ## Download and run
 
-Download `TerraForge-v0.1.0-Ubuntu-x86_64.tar.gz` from this repository's Releases page, extract it, and run `./launch.sh` inside the extracted folder. The portable download includes Java 21; Java installation is not required.
+Download `TerraForge-v0.1.1-Ubuntu-x86_64.tar.gz` from this repository's Releases page, extract it, and run `./launch.sh` inside the extracted folder. The portable download includes Java 21; Java installation is not required.
 
 Built and tested on Ubuntu 24.04 x86_64. GPU views need working OpenGL drivers. The runtime still uses standard Linux desktop, graphics, audio and font libraries. Other Linux distributions are not verified. The source-only checkout requires a Java 21 JDK.
+
+## Updated in v0.1.1
+
+This release incorporates the supplied updated app: hydraulic erosion, ground cover, mountain material zones, natural spurs, connected watershed routing and visible downstream river branches. The launcher explicitly selects Java 21 to avoid the Java 25/headless startup problem.
 
 ## Features
 
@@ -32,6 +36,10 @@ bash ./launch.sh
 Bundled LWJGL JARs and their notices are under `lib/`. `build.sh` copies the converted tree catalog into the application JAR. Run `java -jar TerraForge.jar --version` to check the application version.
 
 For the included large-island recipe, open `examples/Alpine-Streams-16384-Y1024.tgraph` in Nodes, select 16384 and build. The graph is included; multi-gigabyte generated worlds are not part of the app download.
+
+## Minecraft assets and compatibility
+
+Minecraft game files and textures are not distributed. The Minecraft-style preview can read textures from a user's locally installed Minecraft 1.20.4 client. This project is not affiliated with Mojang or Microsoft.
 
 ## Release status and credits
 
