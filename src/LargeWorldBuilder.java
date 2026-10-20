@@ -42,13 +42,14 @@ public class LargeWorldBuilder{
   for(int z=0;z<TILE;z++)for(int x=0;x<TILE;x++){int xx=rx*TILE+x,zz=rz*TILE+z,i=z*TILE+x;float h=sample(global.height,xx,zz);double edge=Math.min(Math.min(xx,zz),Math.min(SIZE-1-xx,SIZE-1-zz));double t=TerraForge.smooth(Math.min(1,edge/384));h=(float)((SEA-24)*(1-t)+h*t);w.height[i]=Math.min(ceiling,h);e.water[i]=(float)(SEA+(sampleWater(global,xx,zz)-SEA)*t);e.snow[i]=channel(global.snow,xx,zz,0);e.ice[i]=channel(global.ice,xx,zz,0);e.glacier[i]=channel(global.glacier,xx,zz,0);e.river[i]=channel(global.river,xx,zz,0);e.temperature[i]=channel(global.temperature,xx,zz,.6f);e.rain[i]=channel(global.rain,xx,zz,.7f);e.material[i]=category(global.material,xx,zz);e.biome[i]=category(global.biome,xx,zz);
    if(h<=e.water[i]){e.snow[i]=0;if(edge<384)e.material[i]=2;}
   }
-  RiverRibbon.refine(global,w,rx*TILE,rz*TILE,SEA);
+  RiverRibbon.refine(global,w,rx*TILE,rz*TILE,SEA);float[] seaDistance=seaDistance(global);e.shoreDistance=new float[TILE*TILE];for(int z=0;z<TILE;z++)for(int x=0;x<TILE;x++)e.shoreDistance[z*TILE+x]=sample(seaDistance,rx*TILE+x,rz*TILE+z);
   if(ACTIVE_GRAPH!=null)for(var detail:ACTIVE_GRAPH.nodes.values())if(detail.type==TerrainGraph.Type.TERRAIN_DETAIL){e=TerrainDetail.apply(detail,e,TILE,TILE,SEA,SEED,rx*TILE,rz*TILE,()->false);w.height=e.height;}
-  var rocks=node(TerrainGraph.Type.ROCKS,40);rocks.values.put("minY",145.0);rocks.values.put("maxY",512.0);rocks.values.put("stoneCoverage",.75);rocks.values.put("stoneSlope",1.0);rocks.values.put("spacing",28.0);rocks.values.put("density",.45);rocks=localNode(TerrainGraph.Type.ROCKS,0,rocks,rx,rz);w.environment=rocks==null?e:RockNodes.apply(rocks,e,null,TILE,TILE,SEA,SEED,()->false);w.height=w.environment.height;for(int i=0;i<w.height.length;i++){w.height[i]=Math.min(ceiling,w.height[i]);if(Math.round(w.height[i])>=ceiling)w.environment.snow[i]=0;}
+  var rocks=node(TerrainGraph.Type.ROCKS,40);rocks.values.put("minY",145.0);rocks.values.put("maxY",512.0);rocks.values.put("stoneCoverage",.75);rocks.values.put("stoneSlope",1.0);rocks.values.put("spacing",28.0);rocks.values.put("density",.45);rocks=localNode(TerrainGraph.Type.ROCKS,0,rocks,rx,rz);w.environment=rocks==null?e:RockNodes.apply(rocks,e,null,TILE,TILE,SEA,SEED,()->false);w.height=w.environment.height;if(ACTIVE_GRAPH!=null)for(int k=1;;k++){var more=localNode(TerrainGraph.Type.ROCKS,k,rocks,rx,rz);if(more==null)break;w.environment=RockNodes.apply(more,w.environment,null,TILE,TILE,SEA,SEED,()->false);w.height=w.environment.height;}for(int i=0;i<w.height.length;i++){w.height[i]=Math.min(ceiling,w.height[i]);if(Math.round(w.height[i])>=ceiling)w.environment.snow[i]=0;}
   if(ACTIVE_GRAPH!=null)for(var banks:ACTIVE_GRAPH.nodes.values())if(banks.type==TerrainGraph.Type.RIVER_BANKS){w.environment=RiverBanks.apply(banks,w.environment,TILE,TILE,SEA,SEED,rx*TILE,rz*TILE,()->false);w.height=w.environment.height;sealTileEdges(global,w,rx,rz);}
   RiverPuddleCleanup.apply(w.environment,TILE,SEA,64,global.ribbons,rx*TILE,rz*TILE);
+  w.environment.originX=rx*TILE;w.environment.originZ=rz*TILE;zoneEdges(global,w.environment,rx,rz);TreeLibrary.ceiling=Math.max(318,w.buildHeight-65);
   var trees=node(TerrainGraph.Type.TREES,41);trees.values.put("group",28.0);var list=TreeLibrary.catalog().byGroup().get(28);for(int k=0;k<list.size();k++)if(list.get(k).sourceCell==230)trees.values.put("variant",(double)k);trees.values.put("spacing",23.0);trees.values.put("density",.9);trees.values.put("minY",85.0);trees.values.put("maxY",300.0);trees.values.put("slope",1.5);trees=localNode(TerrainGraph.Type.TREES,0,trees,rx,rz);if(trees!=null)w.environment=TreeLibrary.scatter(trees,w.environment,null,TILE,TILE,SEA,SEED,()->false);
-  var oak=node(TerrainGraph.Type.TREES,42);oak.values.put("variant",20.0);oak.values.put("spacing",45.0);oak.values.put("density",.4);oak.values.put("minY",65.0);oak.values.put("maxY",85.0);oak.values.put("slope",1.0);oak=localNode(TerrainGraph.Type.TREES,1,oak,rx,rz);if(oak!=null)w.environment=TreeLibrary.scatter(oak,w.environment,null,TILE,TILE,SEA,SEED,()->false);if(finishMaterials&&ACTIVE_GRAPH!=null)for(var node:ACTIVE_GRAPH.nodes.values())if(node.type==TerrainGraph.Type.ORGANIC_MATERIALS)w.environment=OrganicMaterials.apply(node,w.environment,TILE,TILE,SEA,SEED,rx*TILE,rz*TILE,()->false);if(finishMaterials&&ACTIVE_GRAPH!=null)for(var node:ACTIVE_GRAPH.nodes.values())if(node.type==TerrainGraph.Type.SNOW&&node.p("natural")>.5)w.environment=NaturalSnow.apply(node,w.environment,w.environment,TILE,TILE,SEA,SEED,rx*TILE,rz*TILE,()->false);return w;
+  var oak=node(TerrainGraph.Type.TREES,42);oak.values.put("variant",20.0);oak.values.put("spacing",45.0);oak.values.put("density",.4);oak.values.put("minY",65.0);oak.values.put("maxY",85.0);oak.values.put("slope",1.0);oak=localNode(TerrainGraph.Type.TREES,1,oak,rx,rz);if(oak!=null)w.environment=TreeLibrary.scatter(oak,w.environment,null,TILE,TILE,SEA,SEED,()->false);if(ACTIVE_GRAPH!=null)for(int k=2;;k++){var extra=localNode(TerrainGraph.Type.TREES,k,oak,rx,rz);if(extra==null)break;w.environment=TreeLibrary.scatter(extra,w.environment,null,TILE,TILE,SEA,SEED,()->false);}if(finishMaterials&&ACTIVE_GRAPH!=null)for(var node:ACTIVE_GRAPH.nodes.values())if(node.type==TerrainGraph.Type.ORGANIC_MATERIALS)w.environment=OrganicMaterials.apply(node,w.environment,TILE,TILE,SEA,SEED,rx*TILE,rz*TILE,()->false);if(finishMaterials&&ACTIVE_GRAPH!=null)for(var node:ACTIVE_GRAPH.nodes.values())if(node.type==TerrainGraph.Type.SNOW&&node.p("natural")>.5)w.environment=NaturalSnow.apply(node,w.environment,w.environment,TILE,TILE,SEA,SEED,rx*TILE,rz*TILE,()->false);return w;
  }
  static void region(TerraForge.World w,Path file,int rx,int rz)throws IOException{
   Path tmp=file.resolveSibling(file.getFileName()+".tmp");var forest=new TreeLibrary.SpatialIndex(w);
@@ -77,4 +78,26 @@ public class LargeWorldBuilder{
   Files.writeString(dest.resolve("build-details.txt"),"Size=16384\nSeed="+SEED+"\nPeakX="+(peak%GRID*8)+"\nPeakZ="+(peak/GRID*8)+"\nPeakY="+Math.round(global.height[peak])+"\nSpawnX="+(spawn%GRID*8)+"\nSpawnZ="+(spawn/GRID*8)+"\nSpawnY="+(Math.round(global.height[spawn])+4)+"\nTrees="+trees.get()+"\nRegions=1024\nChunks=1048576\nCoarse global environmental layout=2048, smoothly sampled into full-resolution region terrain. Rock and tree placement operate at full block resolution.\n");
   System.out.println("COMPLETE "+dest);
  }
+    static EnvironmentMap seaDistanceFor;static float[] seaDistanceCache;
+    /** Distance to the open sea in blocks on the layout grid (finite everywhere), cached per layout. */
+    static synchronized float[] seaDistance(EnvironmentMap global){
+        if(seaDistanceFor!=global){float[] d=EnvironmentNodes.distanceToSea(global.height,GRID,SEA,()->false);for(int i=0;i<d.length;i++)d[i]=Float.isFinite(d[i])?d[i]*(SIZE/(float)GRID):1e6f;seaDistanceCache=d;seaDistanceFor=global;}
+        return seaDistanceCache;
+    }
+    static EnvironmentMap slopeFor;static float[][] slopeCache;
+    /** Whole-map slope and aspect on the layout grid, cached per layout. */
+    static synchronized float[][] layoutSlope(EnvironmentMap global){
+        if(slopeFor!=global){var tmp=new EnvironmentMap(MountainZones.smooth(global.height,GRID,8));MountainZones.fields(tmp,GRID,SIZE);float[] wide=MountainZones.smooth(global.height,GRID,8/7.0),bowl=new float[GRID*GRID];for(int i=0;i<bowl.length;i++)bowl[i]=wide[i]-tmp.height[i];slopeCache=new float[][]{tmp.zoneSlope,tmp.zoneNorth,bowl};slopeFor=global;}
+        return slopeCache;
+    }
+    /** Tile-local slope is exact inside the tile but biased at its edges; blend toward the whole-map slope there so neighbouring tiles agree. */
+    static void zoneEdges(EnvironmentMap global,EnvironmentMap e,int rx,int rz){
+        MountainZones.fields(e,TILE,TILE);float[][] g=layoutSlope(global);int band=24;
+        float[] slope=e.zoneSlope.clone(),north=e.zoneNorth.clone();
+        for(int z=0;z<TILE;z++)for(int x=0;x<TILE;x++){int edge=Math.min(Math.min(x,z),Math.min(TILE-1-x,TILE-1-z));if(edge>=band)continue;
+            double t=TerraForge.smooth(edge/(double)band);int i=z*TILE+x;
+            slope[i]=(float)(sample(g[0],rx*TILE+x,rz*TILE+z)*(1-t)+slope[i]*t);north[i]=(float)(sample(g[1],rx*TILE+x,rz*TILE+z)*(1-t)+north[i]*t);}
+        e.zoneSlope=slope;e.zoneNorth=north;
+        float[] bowl=new float[TILE*TILE];for(int z=0;z<TILE;z++)for(int x=0;x<TILE;x++)bowl[z*TILE+x]=sample(g[2],rx*TILE+x,rz*TILE+z);e.zoneBowl=bowl;
+    }
 }

@@ -1,7 +1,7 @@
 import java.util.*;import java.util.function.BooleanSupplier;
 /** Final channel containment and riparian surfaces; absolute coordinates keep regional seams stable. */
 final class RiverBanks {
- static final String[] EXTRA_BLOCKS={"coarse_dirt","cobblestone","andesite","mossy_cobblestone","podzol","rooted_dirt","moss_block","diorite","granite"};
+ static final String[] EXTRA_BLOCKS={"coarse_dirt","cobblestone","andesite","mossy_cobblestone","podzol","rooted_dirt","moss_block","diorite","granite","tuff","calcite"};
  static float[] waterDistance(EnvironmentMap b,int n,int sea,BooleanSupplier stop){float[] d=new float[n*n];for(int i=0;i<d.length;i++)d[i]=b.waterY(i,sea)>Math.round(b.height[i])?0:Float.POSITIVE_INFINITY;spread(d,null,n,stop);return d;}
  static void spread(float[] d,float[] level,int n,BooleanSupplier stop){for(int pass=0;pass<2;pass++)for(int row=0;row<n;row++){EnvironmentNodes.cancel(stop);int z=pass==0?row:n-1-row,step=pass==0?-1:1;for(int col=0;col<n;col++){int x=pass==0?col:n-1-col,i=z*n+x,xx=x+step,zz=z+step;if(xx>=0&&xx<n)relax(d,level,i,z*n+xx,1);if(zz>=0&&zz<n){relax(d,level,i,zz*n+x,1);if(x>0)relax(d,level,i,zz*n+x-1,1.4142136f);if(x<n-1)relax(d,level,i,zz*n+x+1,1.4142136f);}}}}
  static void relax(float[] d,float[] levels,int i,int j,float step){if(d[j]+step<d[i]){d[i]=d[j]+step;if(levels!=null)levels[i]=levels[j];}}
