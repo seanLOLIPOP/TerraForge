@@ -1,3 +1,12 @@
+# TerraForge v0.1.3 — Portable region-backed editor
+
+- Build large maps region by region on disk, with a lightweight editor overview.
+- Load full-resolution Minecraft-view windows from the shared region layout on demand.
+- Export already-built region maps by copying the world without editor overview files.
+- Reuse completed regions when rebuilding the same graph and settings.
+- Keep region builds, recovery and viewer cache beside the portable app, with a home-folder fallback for app data when needed.
+- Retain bundled Java 21 and explicit Java 21 launcher selection.
+
 # TerraForge v0.1.2 — Flexible low-memory export
 
 - Select region export sizes from 2048 to 16384 blocks in the export dialog.

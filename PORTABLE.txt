@@ -1,0 +1,19 @@
+TerraForge - portable edition (Linux x64)
+
+Run:     ./launch.sh          (or right-click launch.sh > Run as a Program)
+Needs:   nothing installed. Java 21 is included in runtime/ (about 55 MB).
+         The included Java needs a recent Linux (glibc 2.38 or newer: Ubuntu 24.04 or later,
+         Fedora 39+, Debian 13). On older systems launch.sh uses an installed Java 21 instead
+         (sudo apt install openjdk-21-jre).
+
+Everything TerraForge creates stays in this folder:
+  region-builds/   maps built with "Build into map" (about 4-5 GB per 16384 map; delete old ones freely)
+  recovery.terra   automatic recovery copy of an unsaved project
+  .cache/          3D viewer libraries
+Move or copy the whole TerraForge folder (USB drive, another computer) and it keeps working.
+If the folder is read-only, these files go to ~/.terraforge instead.
+
+Exported worlds still go to your Minecraft saves folder (~/.minecraft/saves) unless you choose
+another folder with Browse... in the Export window.
+
+Your map: examples/City-Map-01-Natural-Mountains-Y1024.tgraph (16384 x 16384, seed 74839261).

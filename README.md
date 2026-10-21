@@ -1,4 +1,4 @@
-# TerraForge v0.1.2
+# TerraForge v0.1.3
 
 Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for Ubuntu.
 

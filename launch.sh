@@ -13,4 +13,5 @@ else
   echo 'TerraForge requires Java 21 desktop support. Use the portable download or install openjdk-21-jre.' >&2
   exit 2
 fi
-exec "$java_bin" -XX:MaxRAMPercentage=70 -jar TerraForge.jar "$@"
+mkdir -p .cache/lwjgl
+exec "$java_bin" -XX:MaxRAMPercentage=70 -Dterraforge.home="$PWD" -Dorg.lwjgl.system.SharedLibraryExtractPath="$PWD/.cache/lwjgl" -jar TerraForge.jar "$@"
