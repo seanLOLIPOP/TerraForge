@@ -44,3 +44,7 @@ Minecraft game files and textures are not distributed. The Minecraft-style previ
 ## Release status and credits
 
 This is an early desktop release. Back up projects before editing or exporting. See `RELEASE_NOTES.md` for release details and `THIRD_PARTY_NOTICES.md` for bundled dependencies and tree-library attribution. No new license to third-party content is granted by this repository.
+
+## macOS downloads
+
+Intel and Apple Silicon app bundles are attached to [v0.1.3](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.3). See [macOS packaging notes](packaging/macos/README.md) for version and validation details.
