@@ -50,3 +50,7 @@ This is an early desktop release. Back up projects before editing or exporting. 
 Intel and Apple Silicon app bundles are attached to [v0.1.3](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.3). See [macOS packaging notes](packaging/macos/README.md) for version and validation details.
 
 Mac users: choose the **-r2.zip** downloads on v0.1.3 for the latest supplied Mac update.
+
+## Mac release v0.1.4
+
+Download the latest supplied [Intel and Apple Silicon Mac apps from v0.1.4](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.4). See [distribution notes](packaging/macos/RELEASE-v0.1.4.md) for internal version and validation details.
