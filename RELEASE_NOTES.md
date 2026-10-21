@@ -1,3 +1,15 @@
+# TerraForge v0.1.2 — Flexible low-memory export
+
+- Select region export sizes from 2048 to 16384 blocks in the export dialog.
+- Build 512 × 512 regions separately, with concurrency limited by available Java heap.
+- Resume region exports without rebuilding completed regions.
+- Record the selected map size, seed, sea level and region count in export metadata.
+- Adapt river sampling to the selected region export size.
+- Fix region worker cache locking to avoid export deadlocks.
+- Retain the Java 21 desktop launcher fix and bundled runtime.
+
+Portable Ubuntu x86_64 archives include Java 21. Extract and run ./launch.sh.
+
 # TerraForge v0.1.1 — Updated terrain and rivers
 
 Updated from the supplied TerraForge-Ubuntu-fixed.zip.
