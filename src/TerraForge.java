@@ -12,7 +12,7 @@ import java.util.zip.*;
 /** Standalone terrain painter and Minecraft Java 1.20.4 exporter. */
 public class TerraForge extends JFrame {
     private static final long serialVersionUID=2L;
-    static final String VERSION="0.1.1";
+    static final String VERSION="0.1.2";
     static class World {
         int size,sea,buildHeight=384,exportSpawnX=-1,exportSpawnY=-1,exportSpawnZ=-1; long seed; float[] height; byte[] material;EnvironmentMap environment;int[] treeHeights;
         TerrainGraph graph;TerrainGenerator.Settings settings=TerrainGenerator.Settings.legacy();String recipeShape="Island";int recipeRelief=85;
@@ -118,7 +118,7 @@ public class TerraForge extends JFrame {
     void export(){if(world!=null&&!busy)ExportDialog.show(this);}
     class Canvas extends JPanel {
         private static final long serialVersionUID=2L;
-    static final String VERSION="0.1.1";
+    static final String VERSION="0.1.2";
         int mouseX=-1,mouseY=-1;boolean drawing,panning,orbiting;Point lastScreen,lastPaint;double zoom=1,panX=0,panY=0,yaw=-Math.PI/4;BufferedImage cached;
         Canvas(){setBackground(new Color(17,25,32));MouseAdapter m=new MouseAdapter(){
             public void mousePressed(MouseEvent e){if(busy||world==null)return;lastScreen=e.getPoint();if(SwingUtilities.isRightMouseButton(e)||SwingUtilities.isMiddleMouseButton(e)){panning=true;setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));return;}if(!SwingUtilities.isLeftMouseButton(e))return;if(perspective.isSelected()){orbiting=true;return;}Point p=point(e.getX(),e.getY());if(p==null)return;checkpoint();flatten=world.height[p.y*world.size+p.x];drawing=true;lastPaint=p;stamp(p);changed();}
