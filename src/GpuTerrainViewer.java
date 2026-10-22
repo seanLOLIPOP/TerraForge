@@ -22,7 +22,7 @@ final class GpuTerrainViewer {
   Thread thread=new Thread(()->{try{new GpuTerrainViewer().run(snapshot.getAndSet(null),capture,false);}catch(Throwable e){e.printStackTrace();SwingUtilities.invokeLater(()->JOptionPane.showMessageDialog(null,"GPU preview could not start: "+e.getMessage(),"GPU preview",JOptionPane.ERROR_MESSAGE));}finally{RUNNING.set(false);}},"TerraForge-GPU");thread.start();
  }
  long window;int terrainProgram,treeProgram,terrainVao,treeVao,terrainBuffer,treeBuffer,instancesBuffer,heightTexture,colorTexture,treeVertices,treeCount;
- int n,sea,grid=1024;double yaw=-.75,pitch=.72,zoom=1.0,focusX=.5,focusZ=.5,exaggeration=4,lastX,lastY;boolean pointer=false;volatile boolean exporting=false;
+ int n,sea,grid=1024;double yaw=-.75,pitch=.72,zoom=1.0,focusX=.5,focusZ=.5,exaggeration=1,lastX,lastY;boolean pointer=false;volatile boolean exporting=false;
  final AtomicReference<Path> exportFile=new AtomicReference<>();
  String renderer;Path autoCapture;boolean exitAfterCapture;
  static final String CAMERA="""
@@ -71,7 +71,7 @@ final class GpuTerrainViewer {
   GLFWErrorCallback error=GLFWErrorCallback.createPrint(System.err);error.set();
   try{
    if(!glfwInit())throw new IllegalStateException("OpenGL window initialization failed");
-   glfwDefaultWindowHints();glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,3);glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,3);glfwWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE);glfwWindowHint(GLFW_SAMPLES,4);
+   glfwDefaultWindowHints();glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR,3);glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR,3);glfwWindowHint(GLFW_OPENGL_PROFILE,GLFW_OPENGL_CORE_PROFILE);if(AppHome.mac())glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT,GLFW_TRUE);/* macOS only offers core contexts that are forward compatible */glfwWindowHint(GLFW_SAMPLES,4);
    window=glfwCreateWindow(1600,1000,"TerraForge GPU · uploading terrain…",0,0);if(window==0)throw new IllegalStateException("OpenGL 3.3 is unavailable");
    glfwMakeContextCurrent(window);GL.createCapabilities();glfwSwapInterval(1);
    renderer=glGetString(GL_RENDERER);System.out.println("GPU_RENDERER: "+renderer+" · "+glGetString(GL_VERSION));
@@ -93,8 +93,8 @@ final class GpuTerrainViewer {
  }
  void upload(TerraForge.World w){
   heightTexture=glGenTextures();glBindTexture(GL_TEXTURE_2D,heightTexture);textureParameters();glTexImage2D(GL_TEXTURE_2D,0,GL_RG32F,n,n,0,GL_RG,GL_FLOAT,(ByteBuffer)null);
-  int rows=Math.min(64,n);FloatBuffer strip=MemoryUtil.memAllocFloat(n*rows*2);
-  try{for(int z=0;z<n;z+=rows){int count=Math.min(rows,n-z);strip.clear();for(int zz=0;zz<count;zz++)for(int x=0;x<n;x++){int i=(z+zz)*n+x;strip.put(w.height[i]);strip.put(w.environment.waterY(i,sea));}strip.flip();glTexSubImage2D(GL_TEXTURE_2D,0,0,z,n,count,GL_RG,GL_FLOAT,strip);glfwPollEvents();}}finally{MemoryUtil.memFree(strip);}
+  int cell=w.cellBlocks();int rows=Math.min(64,n);FloatBuffer strip=MemoryUtil.memAllocFloat(n*rows*2);
+  try{for(int z=0;z<n;z+=rows){int count=Math.min(rows,n-z);strip.clear();for(int zz=0;zz<count;zz++)for(int x=0;x<n;x++){int i=(z+zz)*n+x;strip.put(w.height[i]/cell);strip.put(w.environment.waterY(i,sea)/(float)cell);}strip.flip();glTexSubImage2D(GL_TEXTURE_2D,0,0,z,n,count,GL_RG,GL_FLOAT,strip);glfwPollEvents();}}finally{MemoryUtil.memFree(strip);}
   int side=Math.min(n,4096);colorTexture=glGenTextures();glBindTexture(GL_TEXTURE_2D,colorTexture);textureParameters();glTexImage2D(GL_TEXTURE_2D,0,GL_RGBA8,side,side,0,GL_RGBA,GL_UNSIGNED_BYTE,(ByteBuffer)null);
   ByteBuffer colors=MemoryUtil.memAlloc(side*4*32);
   try{for(int z=0;z<side;z+=32){colors.clear();int count=Math.min(32,side-z);for(int zz=0;zz<count;zz++)for(int x=0;x<side;x++){int sample=EnvironmentView.riverSample(w,x,z+zz,side),xx=sample%n,rz=sample/n;java.awt.Color c=w.waterY(xx,rz)>w.h(xx,rz)?new java.awt.Color(48,112,165):EnvironmentView.surfaceColor(w,xx,rz);colors.put((byte)c.getRed()).put((byte)c.getGreen()).put((byte)c.getBlue()).put((byte)255);}colors.flip();glTexSubImage2D(GL_TEXTURE_2D,0,0,z,side,count,GL_RGBA,GL_UNSIGNED_BYTE,colors);glfwPollEvents();}}finally{MemoryUtil.memFree(colors);}

@@ -11,6 +11,8 @@ import java.util.zip.*;
  */
 final class RegionMap {
     static final int CELL=8,WINDOW=1536;
+    /** Part of the build folder key. Change only when region files must be rebuilt, not on every app release. */
+    static final String BUILD_FORMAT="0.1.0";
     final Path folder;final int size,sea,buildHeight;final long seed;final TerrainGraph graph;final EnvironmentMap layout;
     private final LinkedHashMap<Long,TerraForge.World> tiles=new LinkedHashMap<>(16,.75f,true){protected boolean removeEldestEntry(Map.Entry<Long,TerraForge.World> e){return size()>9;}};
     RegionMap(Path folder,int size,long seed,int sea,TerrainGraph graph,EnvironmentMap layout,int buildHeight){this.folder=folder;this.size=size;this.seed=seed;this.sea=sea;this.graph=graph;this.layout=layout;this.buildHeight=buildHeight;}
@@ -19,7 +21,7 @@ final class RegionMap {
     static Path folderFor(TerrainGraph recipe,int size,long seed,int sea)throws Exception{
         var bytes=new ByteArrayOutputStream();Path tmp=Files.createTempFile("terraforge-key-",".tgraph");
         try{GraphEditor.writeFile(recipe,tmp);bytes.write(Files.readAllBytes(tmp));}finally{Files.deleteIfExists(tmp);}
-        bytes.write((size+"|"+seed+"|"+sea+"|"+TerraForge.VERSION).getBytes());
+        bytes.write((size+"|"+seed+"|"+sea+"|"+BUILD_FORMAT).getBytes());
         byte[] d=MessageDigest.getInstance("SHA-256").digest(bytes.toByteArray());StringBuilder h=new StringBuilder();for(int i=0;i<6;i++)h.append(String.format("%02x",d[i]));
         String root=System.getProperty("terraforge.regionBuilds",AppHome.data("region-builds").toString());
         return Path.of(root).resolve("map-"+size+"-"+h);

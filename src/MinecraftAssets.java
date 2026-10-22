@@ -4,7 +4,7 @@ final class MinecraftAssets implements AutoCloseable {
  record Face(float[] points,float[] uv,int tile,int tint,int direction,int cull){}
  record Model(List<Face> faces,boolean opaque){}
  final ZipFile zip;final Map<String,Map<String,Object>> json=new HashMap<>();final Map<Integer,Model> models=new HashMap<>();final Map<String,Integer> tiles=new LinkedHashMap<>();final List<BufferedImage> images=new ArrayList<>();int loadedTextures,missingTextures;
- static Path locate(){String override=System.getProperty("terraforge.minecraftJar","");if(!override.isBlank()&&Files.isRegularFile(Path.of(override)))return Path.of(override);Path home=Path.of(System.getProperty("user.home"));for(String root:List.of(".minecraft",".var/app/com.mojang.Minecraft/data/minecraft")){Path p=home.resolve(root).resolve("versions/1.20.4/1.20.4.jar");if(Files.isRegularFile(p))return p;}return null;}
+ static Path locate(){String override=System.getProperty("terraforge.minecraftJar","");if(!override.isBlank()&&Files.isRegularFile(Path.of(override)))return Path.of(override);Path home=Path.of(System.getProperty("user.home"));{Path p=AppHome.minecraftDir().resolve("versions/1.20.4/1.20.4.jar");if(Files.isRegularFile(p))return p;}for(String root:List.of(".minecraft",".var/app/com.mojang.Minecraft/data/minecraft")){Path p=home.resolve(root).resolve("versions/1.20.4/1.20.4.jar");if(Files.isRegularFile(p))return p;}return null;}
  MinecraftAssets(Path p)throws IOException{zip=new ZipFile(p.toFile());}
  @SuppressWarnings("unchecked") static Map<String,Object> obj(Object v){return v instanceof Map?(Map<String,Object>)v:Map.of();}
  static List<?> arr(Object v){return v instanceof List?(List<?>)v:List.of();}

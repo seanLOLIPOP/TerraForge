@@ -1,4 +1,4 @@
-# TerraForge v0.1.3
+# TerraForge v0.1.6
 
 Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for Ubuntu.
 
@@ -45,12 +45,14 @@ Minecraft game files and textures are not distributed. The Minecraft-style previ
 
 This is an early desktop release. Back up projects before editing or exporting. See `RELEASE_NOTES.md` for release details and `THIRD_PARTY_NOTICES.md` for bundled dependencies and tree-library attribution. No new license to third-party content is granted by this repository.
 
-## macOS downloads
+## Downloads (v0.1.6)
 
-Intel and Apple Silicon app bundles are attached to [v0.1.3](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.3). See [macOS packaging notes](packaging/macos/README.md) for version and validation details.
+Get the latest apps from [release v0.1.6](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.6):
 
-Mac users: choose the **-r2.zip** downloads on v0.1.3 for the latest supplied Mac update.
+- **TerraForge-Mac-AppleSilicon-v0.1.6.zip**: Macs with M1, M2, M3 or M4
+- **TerraForge-Mac-Intel-v0.1.6.zip**: Intel Macs
+- **TerraForge-Portable-Linux-x64-v0.1.6.zip**: Linux x64, Java included (run `./launch.sh`)
 
-## Mac release v0.1.4
+The Mac apps are unsigned. After moving TerraForge.app to Applications, run `xattr -cr /Applications/TerraForge.app` once in Terminal. The source in this repository builds the same `TerraForge.jar` that ships in all three downloads. See [macOS packaging notes](packaging/macos/README.md).
 
-Download the latest supplied [Intel and Apple Silicon Mac apps from v0.1.4](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.4). See [distribution notes](packaging/macos/RELEASE-v0.1.4.md) for internal version and validation details.
+Low-memory machines (8 GB) build 16384 maps region by region on disk. In Nodes, Build into map does this automatically when the map does not fit in memory. The included `examples/City-Map-01-Natural-Mountains-Y1024.tgraph` is a 16384 island with a Y1024 summit.

@@ -1,3 +1,19 @@
+# TerraForge v0.1.6 — Whole map blocks on region maps, macOS fixes
+
+## Whole map blocks view
+- **Real blocks on region-built maps.** On maps built region by region (for example 16384 maps on 8 GB computers), the view now works in real block coordinates. The distant terrain comes from the map overview at true height. Within 1200 blocks of the ground, the real blocks around you are built from the region files, with trees and vanilla textures, exactly as they export. Flying further away loads the next area automatically.
+- **Fixed the grey, blotchy terrain.** The close-up blocks were drawn at the wrong scale, as a 6 km patch up to Y1024 on top of the map.
+- **Fixed glitchy distant terrain on macOS.** Distant terrain detail levels are now declared correctly for Apple's OpenGL driver.
+- **Lower CPU and GPU use.** The view idles while the camera is still, so it no longer keeps a MacBook busy. The oversized block patch that was the main cause of the slowdown is gone.
+
+## Other
+- Maps you already built are reused. Upgrading does not force a rebuild.
+
+## Also in this version (source now included for the v0.1.3-r2 and v0.1.4 Mac builds)
+- macOS support: forward-compatible OpenGL contexts, Mac Minecraft folders, Mac LWJGL natives on the class path.
+- Views of region-built maps scale heights correctly (no more 8x or 32x tall mountains).
+- "Preview as 16384 map": small builds of large-map graphs are scaled previews with true proportions.
+
 # TerraForge v0.1.3 — Portable region-backed editor
 
 - Build large maps region by region on disk, with a lightweight editor overview.
