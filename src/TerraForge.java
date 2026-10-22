@@ -12,7 +12,7 @@ import java.util.zip.*;
 /** Standalone terrain painter and Minecraft Java 1.20.4 exporter. */
 public class TerraForge extends JFrame {
     private static final long serialVersionUID=2L;
-    static final String VERSION="0.1.7";
+    static final String VERSION="0.1.8";
     static class World {
         int size,sea,buildHeight=384,exportSpawnX=-1,exportSpawnY=-1,exportSpawnZ=-1; long seed; float[] height; byte[] material;EnvironmentMap environment;int[] treeHeights;
         TerrainGraph graph;TerrainGenerator.Settings settings=TerrainGenerator.Settings.legacy();
@@ -132,15 +132,15 @@ public class TerraForge extends JFrame {
     void export(){if(world!=null&&!busy)ExportDialog.show(this);}
     class Canvas extends JPanel {
         private static final long serialVersionUID=2L;
-    static final String VERSION="0.1.7";
+    static final String VERSION="0.1.8";
         int mouseX=-1,mouseY=-1;boolean drawing,panning,orbiting;Point lastScreen,lastPaint;double zoom=1,panX=0,panY=0,yaw=-Math.PI/4;BufferedImage cached;
         Canvas(){setBackground(new Color(17,25,32));MouseAdapter m=new MouseAdapter(){
             public void mousePressed(MouseEvent e){if(busy||world==null)return;lastScreen=e.getPoint();if(SwingUtilities.isRightMouseButton(e)||SwingUtilities.isMiddleMouseButton(e)){panning=true;setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));return;}if(!SwingUtilities.isLeftMouseButton(e))return;if(perspective.isSelected()){orbiting=true;return;}Point p=point(e.getX(),e.getY());if(p==null)return;if(world.region!=null){status.setText("Painting is not available on maps built region by region. Change the graph and build again.");return;}checkpoint();flatten=world.height[p.y*world.size+p.x];drawing=true;lastPaint=p;stamp(p);changed();}
             public void mouseReleased(MouseEvent e){drawing=panning=orbiting=false;lastPaint=null;setCursor(Cursor.getDefaultCursor());}
-            public void mouseDragged(MouseEvent e){if(busy)return;if(panning){panX+=e.getX()-lastScreen.x;panY+=e.getY()-lastScreen.y;lastScreen=e.getPoint();repaint();}else if(orbiting){yaw+=(e.getX()-lastScreen.x)*.012;lastScreen=e.getPoint();repaint();}else if(drawing){Point p=point(e.getX(),e.getY());if(p!=null){if(lastPaint==null)lastPaint=p;double distance=p.distance(lastPaint);int steps=Math.max(1,(int)Math.ceil(distance/Math.max(1,radius.getValue()/3.0)));for(int k=1;k<=steps;k++)stamp(new Point((int)Math.round(lastPaint.x+(p.x-lastPaint.x)*(double)k/steps),(int)Math.round(lastPaint.y+(p.y-lastPaint.y)*(double)k/steps)));lastPaint=p;changed();}else lastPaint=null;}mouseMoved(e);}
+            public void mouseDragged(MouseEvent e){if(busy)return;if(panning){panX+=e.getX()-lastScreen.x;panY+=e.getY()-lastScreen.y;lastScreen=e.getPoint();repaint();}else if(orbiting){yaw+=ViewControls.delta(e.getX()-lastScreen.x)*.012*ViewControls.sensitivity();lastScreen=e.getPoint();repaint();}else if(drawing){Point p=point(e.getX(),e.getY());if(p!=null){if(lastPaint==null)lastPaint=p;double distance=p.distance(lastPaint);int steps=Math.max(1,(int)Math.ceil(distance/Math.max(1,radius.getValue()/3.0)));for(int k=1;k<=steps;k++)stamp(new Point((int)Math.round(lastPaint.x+(p.x-lastPaint.x)*(double)k/steps),(int)Math.round(lastPaint.y+(p.y-lastPaint.y)*(double)k/steps)));lastPaint=p;changed();}else lastPaint=null;}mouseMoved(e);}
             public void mouseMoved(MouseEvent e){mouseX=e.getX();mouseY=e.getY();Point p=world==null||perspective.isSelected()?null:point(mouseX,mouseY);coordinates.setText(p==null?" ":"X "+p.x+"  Z "+p.y+"  Y "+world.h(p.x,p.y)+"  |  "+Math.round(zoom*100)+"%");repaint();}
             public void mouseExited(MouseEvent e){mouseX=-1;coordinates.setText(" ");repaint();}
-            public void mouseWheelMoved(MouseWheelEvent e){zoomAt(Math.pow(1.15,-e.getPreciseWheelRotation()),e.getX(),e.getY());}
+            public void mouseWheelMoved(MouseWheelEvent e){zoomAt(Math.pow(1.15,-ViewControls.wheelStep(e.getPreciseWheelRotation())),e.getX(),e.getY());}
         };addMouseListener(m);addMouseMotionListener(m);addMouseWheelListener(m);}
         void invalidateTerrain(){cached=null;if(world!=null)world.treeHeights=null;repaint();}
         void fit(){zoom=perspective.isSelected()&&world!=null&&world.size>=4096?1.6:1;panX=panY=0;repaint();}

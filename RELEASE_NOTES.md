@@ -1,3 +1,11 @@
+# TerraForge v0.1.8 — Calmer 3D controls
+
+- Mouse controls in all 3D views (GPU 3D, Minecraft view, Whole map blocks and the editor's 3D) are half as sensitive by default.
+- `[` and `]` lower or raise mouse sensitivity in 10% steps. In the Minecraft and Whole map views, the mouse wheel sets fly speed. Both settings are shown in the window title and remembered in `controls.properties` beside the app.
+- Linux: captured mouse look uses raw mouse motion where available, so the cursor re-centring no longer inflates or jitters movement. Single oversized cursor jumps are ignored.
+- Smooth-scrolling wheels and touchpads zoom one step per event instead of racing.
+- Includes all v0.1.7 changes (Build region by region option).
+
 # TerraForge v0.1.7 — Region builds on every computer
 
 - New **Build region by region** option in Nodes, next to Map size. It is on by default for 8192 and 16384 maps, so they build region by region on disk on every computer. Before, computers with lots of RAM (such as Linux desktops) fell back to the old in-memory build. Untick it to build in memory. Maps too large for memory always use regions.

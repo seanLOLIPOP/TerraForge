@@ -1,4 +1,4 @@
-# TerraForge v0.1.7
+# TerraForge v0.1.8
 
 Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for Ubuntu.
 
@@ -37,6 +37,12 @@ Bundled LWJGL JARs and their notices are under `lib/`. `build.sh` copies the con
 
 For the included large-island recipe, open `examples/Alpine-Streams-16384-Y1024.tgraph` in Nodes, select 16384 and build. The graph is included; multi-gigabyte generated worlds are not part of the app download.
 
+## 3D view controls
+
+- **GPU 3D:** left drag orbits, right drag pans, wheel zooms.
+- **Minecraft view and Whole map blocks:** click to capture the mouse, then WASD to fly, Space/Shift for up/down, Ctrl for fast. The mouse wheel sets fly speed. Esc releases the mouse.
+- **All views:** `[` and `]` lower or raise mouse sensitivity in 10% steps. Sensitivity and fly speed are saved in `controls.properties` beside the app.
+
 ## Minecraft assets and compatibility
 
 Minecraft game files and textures are not distributed. The Minecraft-style preview can read textures from a user's locally installed Minecraft 1.20.4 client. This project is not affiliated with Mojang or Microsoft.
@@ -45,13 +51,13 @@ Minecraft game files and textures are not distributed. The Minecraft-style previ
 
 This is an early desktop release. Back up projects before editing or exporting. See `RELEASE_NOTES.md` for release details and `THIRD_PARTY_NOTICES.md` for bundled dependencies and tree-library attribution. No new license to third-party content is granted by this repository.
 
-## Downloads (v0.1.7)
+## Downloads (v0.1.8)
 
-Get the latest apps from [release v0.1.7](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.7):
+Get the latest apps from [release v0.1.8](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.8):
 
-- **TerraForge-v0.1.7-Mac-AppleSilicon.zip**: Macs with M1, M2, M3 or M4
-- **TerraForge-v0.1.7-Mac-Intel.zip**: Intel Macs
-- **TerraForge-v0.1.7-Ubuntu-x86_64.tar.gz**: Ubuntu / Linux x64, Java included (extract and run `./launch.sh`)
+- **TerraForge-v0.1.8-Mac-AppleSilicon.zip**: Macs with M1, M2, M3 or M4
+- **TerraForge-v0.1.8-Mac-Intel.zip**: Intel Macs
+- **TerraForge-v0.1.8-Ubuntu-x86_64.tar.gz**: Ubuntu / Linux x64, Java included (extract and run `./launch.sh`)
 
 The Mac apps are unsigned. After moving TerraForge.app to Applications, run `xattr -cr /Applications/TerraForge.app` once in Terminal. The source in this repository builds the same `TerraForge.jar` that ships in all three downloads. See [macOS packaging notes](packaging/macos/README.md).
 
