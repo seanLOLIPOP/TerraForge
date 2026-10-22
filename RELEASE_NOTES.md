@@ -1,3 +1,9 @@
+# TerraForge v0.1.9 — Mouse look fix for Wayland
+
+- Fixed: on Ubuntu desktops running Wayland (common with NVIDIA), the Minecraft view and Whole map blocks could receive no mouse movement after v0.1.8 switched on raw mouse input. Raw input is now skipped on Wayland, and anywhere it delivers no movement within 1.5 seconds of capturing the mouse, the app switches back to normal mouse input automatically.
+- `-Dterraforge.noRawMouse=true` turns raw input off entirely.
+- Includes all v0.1.8 changes (calmer, adjustable 3D controls).
+
 # TerraForge v0.1.8 — Calmer 3D controls
 
 - Mouse controls in all 3D views (GPU 3D, Minecraft view, Whole map blocks and the editor's 3D) are half as sensitive by default.

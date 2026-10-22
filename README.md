@@ -1,4 +1,4 @@
-# TerraForge v0.1.8
+# TerraForge v0.1.9
 
 Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for Ubuntu.
 
@@ -51,13 +51,13 @@ Minecraft game files and textures are not distributed. The Minecraft-style previ
 
 This is an early desktop release. Back up projects before editing or exporting. See `RELEASE_NOTES.md` for release details and `THIRD_PARTY_NOTICES.md` for bundled dependencies and tree-library attribution. No new license to third-party content is granted by this repository.
 
-## Downloads (v0.1.8)
+## Downloads (v0.1.9)
 
-Get the latest apps from [release v0.1.8](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.8):
+Get the latest apps from [release v0.1.9](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.9):
 
-- **TerraForge-v0.1.8-Mac-AppleSilicon.zip**: Macs with M1, M2, M3 or M4
-- **TerraForge-v0.1.8-Mac-Intel.zip**: Intel Macs
-- **TerraForge-v0.1.8-Ubuntu-x86_64.tar.gz**: Ubuntu / Linux x64, Java included (extract and run `./launch.sh`)
+- **TerraForge-v0.1.9-Mac-AppleSilicon.zip**: Macs with M1, M2, M3 or M4
+- **TerraForge-v0.1.9-Mac-Intel.zip**: Intel Macs
+- **TerraForge-v0.1.9-Ubuntu-x86_64.tar.gz**: Ubuntu / Linux x64, Java included (extract and run `./launch.sh`)
 
 The Mac apps are unsigned. After moving TerraForge.app to Applications, run `xattr -cr /Applications/TerraForge.app` once in Terminal. The source in this repository builds the same `TerraForge.jar` that ships in all three downloads. See [macOS packaging notes](packaging/macos/README.md).
 

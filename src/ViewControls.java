@@ -41,9 +41,21 @@ final class ViewControls {
     /** Smooth-scrolling wheels and touchpads send large or many small steps; limit each event to one notch. */
     static double wheelStep(double y){return clamp(y,-1,1);}
     /** Turn on raw (unaccelerated, un-warped) mouse motion while the cursor is captured, where the system supports it. */
-    static void captureMouse(long window){
+    /** Raw motion is skipped on Wayland desktops: through XWayland it can deliver no mouse movement at all. */
+    static boolean wayland(){String t=System.getenv("XDG_SESSION_TYPE"),w=System.getenv("WAYLAND_DISPLAY");return "wayland".equalsIgnoreCase(t)||w!=null&&!w.isBlank();}
+    static volatile boolean rawAllowed=!Boolean.getBoolean("terraforge.noRawMouse")&&!wayland();
+    /** True when raw motion was switched on for the current capture. */
+    static boolean captureMouse(long window){
         glfwSetInputMode(window,GLFW_CURSOR,GLFW_CURSOR_DISABLED);
-        try{if(glfwRawMouseMotionSupported())glfwSetInputMode(window,GLFW_RAW_MOUSE_MOTION,GLFW_TRUE);}catch(Throwable ignored){}
+        boolean raw=false;
+        try{if(rawAllowed&&glfwRawMouseMotionSupported()){glfwSetInputMode(window,GLFW_RAW_MOUSE_MOTION,GLFW_TRUE);raw=true;}}catch(Throwable ignored){}
+        return raw;
+    }
+    /** Raw motion delivered nothing after capture: turn it off for this session and fall back to normal motion. */
+    static void rawFailed(long window){
+        rawAllowed=false;
+        try{glfwSetInputMode(window,GLFW_RAW_MOUSE_MOTION,GLFW_FALSE);}catch(Throwable ignored){}
+        System.out.println("RAW_MOUSE_MOTION: no movement received, using normal mouse motion");
     }
     static void releaseMouse(long window){
         try{if(glfwRawMouseMotionSupported())glfwSetInputMode(window,GLFW_RAW_MOUSE_MOTION,GLFW_FALSE);}catch(Throwable ignored){}
