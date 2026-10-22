@@ -1,3 +1,8 @@
+# TerraForge v0.1.7 — Region builds on every computer
+
+- New **Build region by region** option in Nodes, next to Map size. It is on by default for 8192 and 16384 maps, so they build region by region on disk on every computer. Before, computers with lots of RAM (such as Linux desktops) fell back to the old in-memory build. Untick it to build in memory. Maps too large for memory always use regions.
+- Includes all v0.1.6 changes.
+
 # TerraForge v0.1.6 — Whole map blocks on region maps, macOS fixes
 
 ## Whole map blocks view

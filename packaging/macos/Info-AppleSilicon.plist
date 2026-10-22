@@ -5,8 +5,8 @@
   <key>CFBundleName</key><string>TerraForge</string>
   <key>CFBundleDisplayName</key><string>TerraForge</string>
   <key>CFBundleIdentifier</key><string>local.terraforge.worldstudio</string>
-  <key>CFBundleVersion</key><string>0.1.6</string>
-  <key>CFBundleShortVersionString</key><string>0.1.6</string>
+  <key>CFBundleVersion</key><string>0.1.7</string>
+  <key>CFBundleShortVersionString</key><string>0.1.7</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleExecutable</key><string>TerraForge</string>
   <key>CFBundleIconFile</key><string>TerraForge</string>

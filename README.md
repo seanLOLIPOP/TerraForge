@@ -1,4 +1,4 @@
-# TerraForge v0.1.6
+# TerraForge v0.1.7
 
 Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for Ubuntu.
 
@@ -45,14 +45,14 @@ Minecraft game files and textures are not distributed. The Minecraft-style previ
 
 This is an early desktop release. Back up projects before editing or exporting. See `RELEASE_NOTES.md` for release details and `THIRD_PARTY_NOTICES.md` for bundled dependencies and tree-library attribution. No new license to third-party content is granted by this repository.
 
-## Downloads (v0.1.6)
+## Downloads (v0.1.7)
 
-Get the latest apps from [release v0.1.6](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.6):
+Get the latest apps from [release v0.1.7](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.7):
 
-- **TerraForge-Mac-AppleSilicon-v0.1.6.zip**: Macs with M1, M2, M3 or M4
-- **TerraForge-Mac-Intel-v0.1.6.zip**: Intel Macs
-- **TerraForge-Portable-Linux-x64-v0.1.6.zip**: Linux x64, Java included (run `./launch.sh`)
+- **TerraForge-v0.1.7-Mac-AppleSilicon.zip**: Macs with M1, M2, M3 or M4
+- **TerraForge-v0.1.7-Mac-Intel.zip**: Intel Macs
+- **TerraForge-v0.1.7-Ubuntu-x86_64.tar.gz**: Ubuntu / Linux x64, Java included (extract and run `./launch.sh`)
 
 The Mac apps are unsigned. After moving TerraForge.app to Applications, run `xattr -cr /Applications/TerraForge.app` once in Terminal. The source in this repository builds the same `TerraForge.jar` that ships in all three downloads. See [macOS packaging notes](packaging/macos/README.md).
 
-Low-memory machines (8 GB) build 16384 maps region by region on disk. In Nodes, Build into map does this automatically when the map does not fit in memory. The included `examples/City-Map-01-Natural-Mountains-Y1024.tgraph` is a 16384 island with a Y1024 summit.
+Nodes → Build into map builds 8192 and 16384 maps region by region on disk by default ("Build region by region", next to Map size). Untick it to build in memory on computers with enough RAM. Maps too large for memory always use regions. The included `examples/City-Map-01-Natural-Mountains-Y1024.tgraph` is a 16384 island with a Y1024 summit.
