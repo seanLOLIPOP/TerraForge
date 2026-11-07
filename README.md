@@ -1,10 +1,48 @@
-# TerraForge v0.1.9
+# TerraForge v0.1.11
 
-Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for Ubuntu.
+Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for Linux, macOS, and Windows.
+
+## Windows portable edition
+
+[Download Windows v0.1.11](https://github.com/seanLOLIPOP/TerraForge/releases/download/v0.1.11/TerraForge-v0.1.11-Windows-x64.zip)
+
+Extract `TerraForge-v0.1.11-Windows-x64.zip` completely and open `TerraForge.exe`.
+The Windows x64 package includes Java 21 and Windows LWJGL natives. No Java install
+or administrator rights are needed. GPU views require OpenGL 3.3 graphics drivers.
+Minecraft saves default to `%APPDATA%\.minecraft\saves`. Run
+`TerraForge-Console.cmd` if you need diagnostic output.
+
+Build on Windows with a Java 21 JDK:
+
+```powershell
+.\build.ps1 -JdkHome 'C:\path\to\jdk-21'
+.\packaging\windows\package.ps1 -JdkHome 'C:\path\to\jdk-21'
+```
+
+The portable ZIP and SHA-256 checksum are written to `dist/`. See
+`packaging/windows/README-Windows.txt` for requirements and storage behavior.
+
+Whole Map Blocks now streams and retains 64-block detail tiles as you fly. Its
+default textured target spans 1,024 blocks across (previously 768); `+` and `-`
+adjust it up to 1,536. Nearby tiles load first, and backtracking reuses cached
+meshes. A 288 MiB mesh-buffer budget keeps distant detail from growing without
+bound; complex terrain may show a smaller textured area. The complete map remains
+visible as simplified terrain while detail arrives.
+
+Nodes → Build into map now runs independent terrain, material, climate, snow,
+and thermal-erosion calculations on multiple CPU threads. It reserves one logical
+CPU for other work and keeps small previews sequential to avoid thread overhead.
+Region builds are no longer capped at four workers: concurrency is bounded by CPU
+count, Java heap, and currently free system memory. Ordered river routing and
+hydraulic erosion still include sequential stages. Java warm-up can make the
+first build slower than later builds. Seeds and generated channel values are
+preserved. Advanced launch flags `-Dterraforge.cpuThreads=N` and
+`-Dterraforge.regionThreads=N` can lower concurrency; region overrides still obey
+CPU and memory limits.
 
 ## Download and run
 
-Download `TerraForge-v0.1.1-Ubuntu-x86_64.tar.gz` from this repository's Releases page, extract it, and run `./launch.sh` inside the extracted folder. The portable download includes Java 21; Java installation is not required.
+For the existing Ubuntu package, download `TerraForge-v0.1.9-Ubuntu-x86_64.tar.gz` from release v0.1.9, extract it, and run `./launch.sh` inside the extracted folder. That package includes Java 21 and predates the v0.1.10/v0.1.11 updates.
 
 Built and tested on Ubuntu 24.04 x86_64. GPU views need working OpenGL drivers. The runtime still uses standard Linux desktop, graphics, audio and font libraries. Other Linux distributions are not verified. The source-only checkout requires a Java 21 JDK.
 
@@ -51,14 +89,17 @@ Minecraft game files and textures are not distributed. The Minecraft-style previ
 
 This is an early desktop release. Back up projects before editing or exporting. See `RELEASE_NOTES.md` for release details and `THIRD_PARTY_NOTICES.md` for bundled dependencies and tree-library attribution. No new license to third-party content is granted by this repository.
 
-## Downloads (v0.1.9)
+## Earlier Mac and Linux downloads (v0.1.9)
 
-Get the latest apps from [release v0.1.9](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.9):
+The previous Mac and Linux packages remain available in [release v0.1.9](https://github.com/seanLOLIPOP/TerraForge/releases/tag/v0.1.9):
 
 - **TerraForge-v0.1.9-Mac-AppleSilicon.zip**: Macs with M1, M2, M3 or M4
 - **TerraForge-v0.1.9-Mac-Intel.zip**: Intel Macs
 - **TerraForge-v0.1.9-Ubuntu-x86_64.tar.gz**: Ubuntu / Linux x64, Java included (extract and run `./launch.sh`)
 
-The Mac apps are unsigned. After moving TerraForge.app to Applications, run `xattr -cr /Applications/TerraForge.app` once in Terminal. The source in this repository builds the same `TerraForge.jar` that ships in all three downloads. See [macOS packaging notes](packaging/macos/README.md).
+The Mac apps are unsigned. After moving TerraForge.app to Applications, run `xattr -cr /Applications/TerraForge.app` once in Terminal. These older packages contain v0.1.9; the current source builds v0.1.11. Updated Mac and Linux packages have not been produced for v0.1.11. See [macOS packaging notes](packaging/macos/README.md).
+
+Validation reports: [CPU generation](docs/CPU-GENERATION-VALIDATION.md) and
+[whole-map streaming](docs/WHOLE-MAP-PERFORMANCE.md).
 
 Nodes → Build into map builds 8192 and 16384 maps region by region on disk by default ("Build region by region", next to Map size). Untick it to build in memory on computers with enough RAM. Maps too large for memory always use regions. The included `examples/City-Map-01-Natural-Mountains-Y1024.tgraph` is a 16384 island with a Y1024 summit.

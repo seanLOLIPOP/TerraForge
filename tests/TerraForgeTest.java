@@ -16,7 +16,7 @@ public class TerraForgeTest {
         float[] initial=w.height.clone();double mass=sum(w.height),r=rough(w);TerraForge.thermalErode(w,30);
         check(Math.abs(sum(w.height)-mass)<.1,"erosion conserves material");check(rough(w)<r,"erosion reduces steep slopes");check(!Arrays.equals(initial,w.height),"erosion changes terrain");
         Arrays.fill(w.height,100);TerraForge.applyBrush(w,32,32,8,3,"River",100);check(w.h(32,32)<w.sea,"river underwater");check(w.h(0,0)==100,"brush locality");check(w.material[32*64+32]==2,"river bed sand");
-        Arrays.fill(w.height,299);TerraForge.applyBrush(w,32,32,8,12,"Raise",299);check(w.h(32,32)==300,"brush height limit");
+        Arrays.fill(w.height,1023);TerraForge.applyBrush(w,32,32,8,12,"Raise",1023);check(w.h(32,32)==1024,"brush height limit");
         TerraForge.applyBrush(w,32,32,8,3,"Natural",100);check(w.material[32*64+32]==0,"natural material reset");
         Path temp=Files.createTempDirectory("terraforge-tests-");Path file=temp.resolve("project.terra");TerraForge.writeProject(w,file);TerraForge.World restored=TerraForge.readProject(file);
         check(Arrays.equals(w.height,restored.height)&&Arrays.equals(w.material,restored.material)&&w.seed==restored.seed,"project round trip");

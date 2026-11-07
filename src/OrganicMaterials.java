@@ -12,10 +12,10 @@ final class OrganicMaterials {
  }
  static EnvironmentMap apply(TerrainGraph.Node node,EnvironmentMap base,int n,int size,int sea,long seed,int ox,int oz,BooleanSupplier stop){
   var e=base.share(base.height);e.material=EnvironmentNodes.channel(base.material,n*n);e.snow=EnvironmentNodes.channel(base.snow,n*n);double block=size/(double)n;int step=Math.max(1,(int)Math.ceil(4/block)),g=(n+step-1)/step+1;double spacing=step*block;float[] levels=new float[g*g],wet=new float[g*g],forest=new float[g*g],patch=new float[g*g],detail=new float[g*g];Arrays.fill(wet,Float.POSITIVE_INFINITY);
-  for(int z=0;z<g;z++)for(int x=0;x<g;x++){int i=z*g+x,xx=Math.min(n-1,x*step),zz=Math.min(n-1,z*step);double wx=ox+xx*block,wz=oz+zz*block,warp=(TerraForge.sample(wx/110,wz/110,seed+2301)-.5)*34;patch[i]=(float)(.72*TerraForge.sample((wx+warp)/node.p("patchSize"),(wz-warp)/node.p("patchSize"),seed+2303)+.28*TerraForge.sample(wx/17,wz/17,seed+2305));detail[i]=(float)TerraForge.sample((wx+warp)/13,(wz-warp)/13,seed+2307);int k=zz*n+xx;if(base.waterY(k,sea)>Math.round(base.height[k])){wet[i]=0;levels[i]=base.waterY(k,sea);}}
+  CpuWork.rows(g,g,stop,z->{for(int x=0;x<g;x++){int i=z*g+x,xx=Math.min(n-1,x*step),zz=Math.min(n-1,z*step);double wx=ox+xx*block,wz=oz+zz*block,warp=(TerraForge.sample(wx/110,wz/110,seed+2301)-.5)*34;patch[i]=(float)(.72*TerraForge.sample((wx+warp)/node.p("patchSize"),(wz-warp)/node.p("patchSize"),seed+2303)+.28*TerraForge.sample(wx/17,wz/17,seed+2305));detail[i]=(float)TerraForge.sample((wx+warp)/13,(wz-warp)/13,seed+2307);int k=zz*n+xx;if(base.waterY(k,sea)>Math.round(base.height[k])){wet[i]=0;levels[i]=base.waterY(k,sea);}}});
   RiverBanks.spread(wet,levels,g,stop);
   for(var tree:base.trees){int tx=(int)Math.round(tree.x()/spacing),tz=(int)Math.round(tree.z()/spacing),r=(int)Math.ceil(18/spacing);for(int z=Math.max(0,tz-r);z<=Math.min(g-1,tz+r);z++)for(int x=Math.max(0,tx-r);x<=Math.min(g-1,tx+r);x++){double distance=Math.hypot(x-tx,z-tz)*spacing;forest[z*g+x]=Math.max(forest[z*g+x],(float)Math.max(0,1-distance/18));}}
-  for(int z=0;z<n;z++){EnvironmentNodes.cancel(stop);for(int x=0;x<n;x++){int i=z*n+x;double gx=x/(double)step,gz=z/(double)step,p=mix(patch,g,gx,gz),d=mix(detail,g,gx,gz),distance=mix(wet,g,gx,gz)*spacing,h=base.height[i],slope=EnvironmentNodes.slope(base.height,i,n,size),cover=mix(forest,g,gx,gz),rain=EnvironmentMap.at(base.rain,i,.65f);boolean underwater=base.waterY(i,sea)>Math.round(h),seaCloser=base.shoreDistance!=null&&!(distance<=base.shoreDistance[i]),river=EnvironmentMap.at(base.river,i,0)>.1||!seaCloser&&mix(levels,g,gx,gz)>sea+2;/* open sea beyond the tile edge outranks inland water seen inside the tile */int mat=1;if(base.material!=null&&(base.material[i]==6||base.material[i]==9))continue;
+  CpuWork.rows(n,n,stop,z->{for(int x=0;x<n;x++){int i=z*n+x;double gx=x/(double)step,gz=z/(double)step,p=mix(patch,g,gx,gz),d=mix(detail,g,gx,gz),distance=mix(wet,g,gx,gz)*spacing,h=base.height[i],slope=EnvironmentNodes.slope(base.height,i,n,size),cover=mix(forest,g,gx,gz),rain=EnvironmentMap.at(base.rain,i,.65f);boolean underwater=base.waterY(i,sea)>Math.round(h),seaCloser=base.shoreDistance!=null&&!(distance<=base.shoreDistance[i]),river=EnvironmentMap.at(base.river,i,0)>.1||!seaCloser&&mix(levels,g,gx,gz)>sea+2;/* open sea beyond the tile edge outranks inland water seen inside the tile */int mat=1;if(base.material!=null&&(base.material[i]==6||base.material[i]==9))continue;
    double rock=EnvironmentNodes.clamp((h-node.p("rockLine")+(p-.5)*100)/110,0,1),exposure=Math.max(rock,EnvironmentNodes.clamp((slope-.25)/.65,0,1));
    double rg=base.riverGrad==null?0:base.riverGrad[i],fl=TerraForge.sample((ox+x*block)/1.9,(oz+z*block)/1.9,seed+2391);
    if(underwater&&river&&rg>.03){mat=fl<.33?3:fl<.58?11:fl<.8?12:13;}/* rapids and falls: rocky, mossy bed */
@@ -28,7 +28,7 @@ final class OrganicMaterials {
    }
    e.material[i]=(byte)mat;
    double snow=EnvironmentMap.at(base.snow,i,0);if(snow>0){double retention=1-TerraForge.smooth(EnvironmentNodes.clamp((slope-.45)/1.2,0,1));double organic=EnvironmentNodes.clamp(snow+(p-.5)*.55+(d-.5)*.12,0,1);e.snow[i]=underwater?0:(float)(organic*retention);}
-  }}
+  }});
   if(node.p("zones")>.5)return MountainZones.apply(node,e,n,size,sea,seed,ox,oz,stop);
   return e;
  }

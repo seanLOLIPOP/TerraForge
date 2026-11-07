@@ -1,3 +1,32 @@
+# TerraForge v0.1.11 — Multicore map generation
+
+- Nodes → Build into map uses a shared CPU pool for independent rows in noise,
+  ridges, mountains, masks, materials, climate, lake shapes, snow, and slope maps.
+- Thermal erosion computes flow in parallel and gathers incoming material in
+  the original floating-point order, preserving terrain output exactly.
+- Small previews stay sequential. One logical CPU is reserved for other work.
+- Region generation removes the four-worker cap and automatically limits work
+  by CPU count, Java heap headroom, and available system memory. Region jobs
+  suppress nested row parallelism so the two pools do not multiply each other.
+- Cancellation and failures drain CPU workers before generation state is reused.
+- Ordered river routing and hydraulic erosion still have sequential stages;
+  CPU utilization varies by node and Java warm-up affects the first build.
+
+# TerraForge v0.1.10 — Progressive whole-map block detail
+
+- Whole Map Blocks now retains 64-block detail tiles and builds only missing
+  tiles as you move, nearest first, instead of rebuilding one large neighborhood.
+- Default textured target increased from 768 to 1,024 blocks across, adjustable
+  with `+`/`-` to 1,536. Complex scenes remain subject to the mesh memory budget.
+- Loaded tiles remain visible while new tiles arrive; the whole-map overview
+  fills remaining gaps. Nearby cached tiles are reused when backtracking.
+- Texture uploads append newly encountered materials instead of rebuilding the
+  whole atlas for each tile. Tile geometry is merged into at most two draw calls.
+- GPU mesh buffers are capped at 288 MiB; farthest detail is discarded first.
+- Region-built maps fetch individual source regions instead of constructing a
+  full 1536-block window before showing any local detail.
+- Includes the portable Windows x64 launcher and bundled Java 21 runtime.
+
 # TerraForge v0.1.9 — Mouse look fix for Wayland
 
 - Fixed: on Ubuntu desktops running Wayland (common with NVIDIA), the Minecraft view and Whole map blocks could receive no mouse movement after v0.1.8 switched on raw mouse input. Raw input is now skipped on Wayland, and anywhere it delivers no movement within 1.5 seconds of capturing the mouse, the app switches back to normal mouse input automatically.

@@ -14,10 +14,10 @@ final class MountainZones {
         int r=Math.max(1,(int)Math.round(5/block));
         float[] a=h.clone(),b=new float[h.length];
         for(int pass=0;pass<2;pass++){
-            for(int z=0;z<n;z++){double sum=0;int count=0;for(int x=-r;x<=r;x++)if(x>=0&&x<n){sum+=a[z*n+x];count++;}
-                for(int x=0;x<n;x++){b[z*n+x]=(float)(sum/count);int out=x-r,in=x+r+1;if(out>=0){sum-=a[z*n+out];count--;}if(in<n){sum+=a[z*n+in];count++;}}}
-            for(int x=0;x<n;x++){double sum=0;int count=0;for(int z=-r;z<=r;z++)if(z>=0&&z<n){sum+=b[z*n+x];count++;}
-                for(int z=0;z<n;z++){a[z*n+x]=(float)(sum/count);int out=z-r,in=z+r+1;if(out>=0){sum-=b[out*n+x];count--;}if(in<n){sum+=b[in*n+x];count++;}}}
+            CpuWork.rows(n,n,()->false,z->{double sum=0;int count=0;for(int x=-r;x<=r;x++)if(x>=0&&x<n){sum+=a[z*n+x];count++;}
+                for(int x=0;x<n;x++){b[z*n+x]=(float)(sum/count);int out=x-r,in=x+r+1;if(out>=0){sum-=a[z*n+out];count--;}if(in<n){sum+=a[z*n+in];count++;}}});
+            CpuWork.rows(n,n,()->false,x->{double sum=0;int count=0;for(int z=-r;z<=r;z++)if(z>=0&&z<n){sum+=b[z*n+x];count++;}
+                for(int z=0;z<n;z++){a[z*n+x]=(float)(sum/count);int out=z-r,in=z+r+1;if(out>=0){sum-=b[out*n+x];count--;}if(in<n){sum+=b[in*n+x];count++;}}});
         }
         return a;
     }
@@ -26,13 +26,13 @@ final class MountainZones {
         if(e.zoneSlope!=null&&e.zoneSlope.length==n*n&&e.zoneSource==e.height)return;
         double block=size/(double)n;float[] s=smooth(e.height,n,block);
         float[] slope=new float[n*n],north=new float[n*n];
-        for(int z=0;z<n;z++)for(int x=0;x<n;x++){
+        CpuWork.rows(n,n,()->false,z->{for(int x=0;x<n;x++){
             int i=z*n+x,xl=Math.max(0,x-1),xr=Math.min(n-1,x+1),zu=Math.max(0,z-1),zd=Math.min(n-1,z+1);
             double dx=(s[z*n+xr]-s[z*n+xl])/((xr-xl)*block),dz=(s[zd*n+x]-s[zu*n+x])/((zd-zu)*block),g=Math.hypot(dx,dz);
             slope[i]=(float)g;
             // Minecraft north is -Z: a slope faces north when the ground falls toward -Z, i.e. height rises with +Z.
             north[i]=(float)(g<1e-4?0:dz/g*Math.min(1,g/.15));
-        }
+        }});
         e.zoneSlope=slope;e.zoneNorth=north;e.zoneSource=e.height;
     }
     static double treeline(double base,double x,double z,long seed,double north){
@@ -82,16 +82,16 @@ final class MountainZones {
         for(int k=0;k<steps;k++){
             EnvironmentNodes.cancel(stop);
             float[] next=talus.clone();
-            for(int z=1;z<n-1;z++)for(int x=1;x<n-1;x++){
-                int i=z*n+x;if(talus[i]>=1)continue;
+            final float[] sourceTalus=talus;CpuWork.rows(n,n,stop,z->{if(z==0||z==n-1)return;for(int x=1;x<n-1;x++){
+                int i=z*n+x;if(sourceTalus[i]>=1)continue;
                 float best=0;
-                for(int j:new int[]{i-1,i+1,i-n,i+n})if(talus[j]>0&&base.height[j]>=base.height[i]-.2f)best=Math.max(best,talus[j]-decay);
+                for(int j:new int[]{i-1,i+1,i-n,i+n})if(sourceTalus[j]>0&&base.height[j]>=base.height[i]-.2f)best=Math.max(best,sourceTalus[j]-decay);
                 if(best>next[i])next[i]=best;
-            }
+            }});
             talus=next;
         }
-        for(int z=0;z<n;z++){
-            EnvironmentNodes.cancel(stop);
+        final float[] bowlField=bowl,talusField=talus;CpuWork.rows(n,n,stop,z->{
+
             for(int x=0;x<n;x++){
                 int i=z*n+x;double h=base.height[i];
                 if(h<sea+12||base.waterY(i,sea)>Math.round(h)||EnvironmentMap.at(base.river,i,0)>.02)continue;
@@ -101,8 +101,8 @@ final class MountainZones {
                 double tl=treeline(treelineBase,wx,wz,seed,no),sn=snowline(snowBase,wx,wz,seed,no),rel=h-tl;
                 double wet=EnvironmentMap.at(base.rain,i,.6f)-.6,p=TerraForge.sample(wx/42,wz/42,seed+7121),d=TerraForge.sample(wx/9,wz/9,seed+7123),f=TerraForge.sample(wx/2.3,wz/2.3,seed+7125);
                 int mat=old;
-                if(bowl!=null&&sl<.55){// glaciers fill shaded high bowls and reach down north-facing valleys
-                    double margin=(TerraForge.sample(wx/60,wz/60,seed+7141)-.5)*50,ice=(h-(sn-40+margin))/60+no*1.2+bowl[i]/8-sl*1.5;
+                if(bowlField!=null&&sl<.55){// glaciers fill shaded high bowls and reach down north-facing valleys
+                    double margin=(TerraForge.sample(wx/60,wz/60,seed+7141)-.5)*50,ice=(h-(sn-40+margin))/60+no*1.2+bowlField[i]/8-sl*1.5;
                     if(ice>.6*(1.4-glaciers)){e.material[i]=6;e.glacier[i]=(float)Math.min(24,4+ice*6);e.biome[i]=SNOWY_SLOPES;continue;}
                 }
                 double local=EnvironmentNodes.slope(base.height,i,n,size);
@@ -110,7 +110,7 @@ final class MountainZones {
                     mat=rel<-40&&wet>-.15&&d>.45?13:f<.4?3:f<.65?12:f<.85?18:11;
                 }
                 else if(sl>1.15-(rel>0?.15:0))mat=cliff(h,wx,wz,seed);
-                else if(talus[i]>0&&talus[i]>f*.9+.05&&sl<1.15)mat=scree(f,h>sn);
+                else if(talusField[i]>0&&talusField[i]>f*.9+.05&&sl<1.15)mat=scree(f,h>sn);
                 else if(sl>.72&&rel>-90)mat=scree(f,h>sn);
                 else if(h>sn-40)mat=d>.82?20:p<.3?7:f<.5?3:f<.75?12:7;
                 else if(rel>170){
@@ -134,7 +134,7 @@ final class MountainZones {
                 else if(rel>0)e.biome[i]=MEADOW;
                 else if(rel>-150)e.biome[i]=h>sn-260?GROVE:TAIGA;
             }
-        }
+        });
         return e;
     }
 }

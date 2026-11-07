@@ -6,5 +6,6 @@ Class-Path: lib/lwjgl-3.3.6.jar lib/lwjgl-glfw-3.3.6.jar lib/lwjgl-opengl
  -natives-macos.jar lib/lwjgl-glfw-3.3.6-natives-macos.jar lib/lwjgl-op
  engl-3.3.6-natives-macos.jar lib/lwjgl-3.3.6-natives-macos-arm64.jar l
  ib/lwjgl-glfw-3.3.6-natives-macos-arm64.jar lib/lwjgl-opengl-3.3.6-nat
- ives-macos-arm64.jar
+ ives-macos-arm64.jar lib/lwjgl-3.3.6-natives-windows.jar lib/lwjgl-glf
+ w-3.3.6-natives-windows.jar lib/lwjgl-opengl-3.3.6-natives-windows.jar
 

@@ -53,7 +53,7 @@ final class TerrainGenerator {
         TerraForge.World w=new TerraForge.World(n,sea,seed);w.settings=s;w.recipeShape=shape;w.recipeRelief=relief;
         double co=Math.cos(Math.toRadians(s.rotation)),si=Math.sin(Math.toRadians(s.rotation));
         double persistence=s.roughness/100.0;
-        for(int z=0;z<n;z++)for(int x=0;x<n;x++) {
+        CpuWork.rows(n,n,()->Thread.currentThread().isInterrupted(),z->{for(int x=0;x<n;x++) {
             double nx=(x+.5)/n,nz=(z+.5)/n;
             double wx=(TerraForge.sample(nx*2,nz*2,seed+1709)-.5)*s.warp/70.0;
             double wz=(TerraForge.sample(nx*2,nz*2,seed-3511)-.5)*s.warp/70.0;
@@ -84,7 +84,7 @@ final class TerrainGenerator {
                 elevation+=(stepped-elevation)*.9;
             }
             w.height[z*n+x]=(float)clamp(elevation,-60,300);
-        }
+        }});
         if(s.erosion>0)TerraForge.thermalErode(w,s.erosion);
         return w;
     }
