@@ -17,13 +17,16 @@ final class GpuWaterShapes {
  static final String LAKE="""
 int count=n*n;double cx=P(centerX),cz=P(centerZ),radius=P(cellRadius),level=P(level),depth=P(depth),newHeight=a,newWater=B[i],newMaterial=C[i],distanceResult=INFINITY;double dx=(x-cx)/radius,dz=(z-cz)/radius,d=hypot(dx,dz);
             if(P(natural)>.5){
+                if(P(realistic)>.5){double angleRot=P(direction)*3.141592653589793/180,u=dx*cos(angleRot)-dz*sin(angleRot),v=dx*sin(angleRot)+dz*cos(angleRot),stretch=sqrt(P(elongation));dx=u/stretch;dz=v*stretch;double warp=P(bays)*.22;dx+=(sampleNoise(dx*2.3+17,dz*2.3+43,seed+((ulong)P(nodeId))*137L)-.5)*warp;dz+=(sampleNoise(dx*2.7+51,dz*2.7+11,seed+((ulong)P(nodeId))*139L)-.5)*warp;d=hypot(dx,dz);}
                 double angle=atan2(dz,dx),phase=sampleNoise(0.7,1.3,seed+((ulong)P(nodeId))*131L+((long)P(locationSeed)))*3.141592653589793*2;
                 double shore=1+.16*sin(3*angle+phase)+.09*sin(5*angle-phase*.7)+.04*sin(9*angle+phase*1.3);
+                if(P(realistic)>.5){double broad=sampleNoise(dx*2.8+83,dz*2.8+37,seed+((ulong)P(nodeId))*151L),detail=sampleNoise(dx*9+23,dz*9+67,seed+((ulong)P(nodeId))*157L);shore*=1+P(bays)*(broad-.5)*.9+P(shoreDetail)*(detail-.5)*.3;}
                 d/=shore;
                 if(P(terrainFit)>0){double uphill=curve(fclamp((A[i]-level-12)/180,0,1));d*=1+P(terrainFit)*uphill*.85*curve(fclamp(d/.8,0,1));}
                 if(d<1.35){
                     double bedNoise=sampleNoise(dx*2+19,dz*2+31,seed+((ulong)P(nodeId))*73L);
                     double bowl=level-.6-depth*pow(fmax(0,1-d*d),1.35)*(.8+.3*bedNoise);
+                    if(P(realistic)>.5){double inward=fmax(0,1-d),shelf=P(shallows),shallow=1.2+2.5*fmin(1,inward/shelf),deep=pow(curve(fclamp((inward-shelf)/(1-shelf),0,1)),.8),variation=sampleNoise(dx*1.7+71,dz*1.7+29,seed+((ulong)P(nodeId))*149L),cut=shallow+fmax(0,depth-shallow)*deep*(1-P(bedVariation)*.45+P(bedVariation)*.6*variation);bowl=level-fmin(depth,cut);}
                     double shoreHeight=level+(d-1)*depth*.7;
                     double target=d<1?bowl:shoreHeight;
                     double blend=curve(fclamp((1.35-d)/.45,0,1));

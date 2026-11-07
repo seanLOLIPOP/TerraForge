@@ -1,6 +1,10 @@
-# TerraForge v0.1.18
+# TerraForge v0.1.19
 
 Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for Linux, macOS, and Windows.
+
+v0.1.19 adds opt-in irregular lake outlines with coves, headlands, adjustable
+elongation and direction, shallow shelves, and varied basin depths. Enable
+Realistic basin in Lake / reservoir. See [lake controls](docs/REALISTIC-LAKES.md).
 
 v0.1.18 adds opt-in natural shorelines: slope-based beach widths, sand/gravel/rock
 shore choices, and shallow underwater shelves. Enable Natural shoreline in the
@@ -17,7 +21,7 @@ for measurements, behavior, and limitations.
 
 [Published Windows releases](https://github.com/seanLOLIPOP/TerraForge/releases)
 
-Extract `TerraForge-v0.1.18-Windows-x64.zip` completely and open `TerraForge.exe`.
+Extract `TerraForge-v0.1.19-Windows-x64.zip` completely and open `TerraForge.exe`.
 The Windows x64 package includes Java 21 and Windows LWJGL natives. No Java install
 or administrator rights are needed. GPU views require OpenGL 3.3 graphics drivers.
 Minecraft saves default to `%APPDATA%\.minecraft\saves`. Run

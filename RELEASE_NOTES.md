@@ -1,3 +1,12 @@
+# TerraForge v0.1.19 - Irregular natural lakes
+
+- Opt-in non-round lake outlines: broad bays, headlands, and smaller shoreline
+  indentations, plus elongation and direction controls.
+- Shallow shelves transition to asymmetric deeper basins.
+- Remove disconnected new puddles while preserving existing water channels.
+- Matching CPU and GPU shape calculations; regional builds share the global layout.
+- Existing graphs retain their lake algorithm until Realistic basin is enabled.
+
 # TerraForge v0.1.18 - Natural shorelines
 
 - Opt-in slope-based variable beaches, sand/gravel/rock choices, and shallow
