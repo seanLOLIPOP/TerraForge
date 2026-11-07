@@ -1,3 +1,16 @@
+# TerraForge v0.1.27 - Rounded river bends
+
+- Smooth the final drainage-first route after collision and loop repair so
+  shortcuts do not leave sharp elbows.
+- Suppress short wiggles with width-scaled, arc-length filtering while retaining
+  larger bends, source positions, water profiles and outlets.
+- Smooth upstream tributary arms only when the result passes terrain, bank-gap
+  and crossing checks; rebuild their collision index with the accepted geometry.
+- Curve tributary approaches downstream into the receiving river instead of
+  snapping sideways onto its centerline.
+- Use actual arc length when marking wet tributary ends after resampling.
+- Start a new build to generate the updated river paths.
+
 # TerraForge v0.1.26 - Open river mouths through beaches
 
 - Carve sea-level river reaches instead of stopping them above the coastline.

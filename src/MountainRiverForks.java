@@ -27,7 +27,13 @@ final class MountainRiverForks {
     if(!Double.isFinite(best))break;uphill+=Math.max(0,upstream?ground-bh:bh-ground);x=bx;z=bz;ground=bh;heading=ba;var previous=points.get(points.size()-1);double water=Math.max(sea,(upstream?Math.max(previous.water(),Math.floor(ground)):Math.min(previous.water(),Math.floor(ground))));double width=Math.max(space==null?1.1:1.5,radius*(space==null?.9+.15*TerraForge.sample(x/60,z/60,seed+91):.7+.6*TerraForge.sample(step*8/144.,.71,seed+owner*317L)));if(upstream)width=Math.max(Math.min(.35,radius),radius*(1-.28*Math.min(1,step*8/reachLength)));var point=new RiverRibbon.Point(x,z,width,water,previous.discharge());if(space!=null){var touch=space.contact(x,z,width,owner,step*8,start);if(touch!=null&&!upstream&&step>8&&touch.wet()&&touch.owner()!=owner&&touch.clearance()<0&&Math.abs(touch.point().water()-water)<=2){point=new RiverRibbon.Point(touch.point().x(),touch.point().z(),width,touch.point().water(),previous.discharge());joined=true;}if(space.crosses(previous,point)){joined=false;break;}space.add(previous,point,owner,step*8);}points.add(point);if(joined)break;
     if(space==null&&step>3&&RiverSideBranches.clearance(base,x,z)<-.2){joined=true;break;}
    }
-   if(points.size()<4){if(space!=null)space.retire(owner);return null;}var tree=new Tree(List.copyOf(points),joined);tree.owner=owner;tree.upstream=upstream;if(remaining<=1||joined)return finish(tree);
+   if(points.size()<4){if(space!=null)space.retire(owner);return null;}
+   if(upstream&&space!=null){
+    var rounded=RiverBendFairing.smooth(points,terrain,n,block);int roundedOwner=space.owner();space.retire(owner);boolean safe=true;double arc=0;
+    for(int i=1;i<rounded.size();i++){var a=rounded.get(i-1);var b=rounded.get(i);arc+=Math.hypot(b.x()-a.x(),b.z()-a.z());var contact=space.contact(b.x(),b.z(),b.radius(),roundedOwner,arc,start);if(space.crosses(a,b)||contact!=null&&contact.clearance()<Math.max(16,block*2)){safe=false;break;}space.add(a,b,roundedOwner,arc);}
+    if(safe){points=new ArrayList<>(rounded);owner=roundedOwner;}else{space.retire(roundedOwner);space.retired.remove(owner);}
+   }
+   var tree=new Tree(List.copyOf(points),joined);tree.owner=owner;tree.upstream=upstream;if(remaining<=1||joined)return finish(tree);
    var end=points.get(points.size()-1);var before=points.get(points.size()-2);double direction=Math.atan2(end.z()-before.z(),end.x()-before.x());
    if(upstream){
     // Continue the dominant valley; add a shorter, narrower headwater on one side.
@@ -45,9 +51,10 @@ final class MountainRiverForks {
    if(tree.left!=null&&tree.right!=null){var a=last(tree.left.points);var b=last(tree.right.points);if(Math.hypot(a.x()-b.x(),a.z()-b.z())<8){retire(tree.right);tree.right=null;}}
    return finish(tree);
   }
-  Tree finish(Tree tree){if(space!=null&&tree.left==null&&tree.right==null&&!tree.joined)space.wetEnd(tree.owner,Math.max(2,Math.floor((tree.points.size()-1)*.8))*8);return tree;}
+  Tree finish(Tree tree){if(space!=null&&tree.left==null&&tree.right==null&&!tree.joined)space.wetEnd(tree.owner,wetArc(tree.points));return tree;}
   void retire(Tree tree){if(tree==null||space==null)return;space.retire(tree.owner);retire(tree.left);retire(tree.right);}
  }
+ static double wetArc(List<RiverRibbon.Point> points){int end=Math.max(2,(int)Math.floor((points.size()-1)*.8));double arc=0;for(int i=1;i<=Math.min(end,points.size()-1);i++)arc+=Math.hypot(points.get(i).x()-points.get(i-1).x(),points.get(i).z()-points.get(i-1).z());return arc;}
  static RiverRibbon.Point last(List<RiverRibbon.Point> p){return p.get(p.size()-1);}
  static void generate(TerrainGraph.Node node,EnvironmentMap e,float[] original,EnvironmentNodes.Drainage drainage,int n,int size,int sea,long seed,double nominalRadius,BooleanSupplier stop){
   int wanted=(int)node.p("mountainForks");if(wanted==0||e.ribbons==null||e.ribbons.segments.isEmpty())return;double block=size/(double)n;var base=e.ribbons;var candidates=new ArrayList<Source>();
