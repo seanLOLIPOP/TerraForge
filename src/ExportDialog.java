@@ -13,7 +13,7 @@ final class ExportDialog {
  }
  static String availableName(Path folder){String base="TerraForge World",name=base;for(int i=2;Files.exists(folder.resolve(name));i++)name=base+" "+i;return name;}
  static TerraForge.World build(TerrainGraph graph,int size,int sea,long seed,TerrainGenerator.Settings settings){
-  var result=graph.evaluate(size,size,sea,seed,graph.output(),()->Thread.currentThread().isInterrupted());var w=new TerraForge.World(size,sea,seed);w.height=result.output();w.environment=result.environment();w.graph=graph;w.settings=settings;return w;
+  var result=graph.evaluateForBuild(size,size,sea,seed,graph.output(),()->Thread.currentThread().isInterrupted());var w=new TerraForge.World(size,sea,seed);w.height=result.output();w.environment=result.environment();w.graph=graph;w.settings=settings;return w;
  }
  static TerraForge.World oceanEdges(TerraForge.World source){
   var w=source.copy();int n=w.size;double width=Math.max(4,Math.min(64,n/12.0));

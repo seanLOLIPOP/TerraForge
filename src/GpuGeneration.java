@@ -8,28 +8,90 @@ import static org.lwjgl.opencl.CL10.*;
 
 /** Optional vendor-neutral OpenCL source nodes. One bounded queue, independent of viewer contexts. */
 final class GpuGeneration {
-    private static Backend backend;
-    private static boolean attempted;
+    private static volatile Backend backend;
+    private static volatile boolean attempted;
     private static final java.util.concurrent.atomic.AtomicLong JOBS=new java.util.concurrent.atomic.AtomicLong();
+    private static final java.util.concurrent.atomic.AtomicLong UPLOADS=new java.util.concurrent.atomic.AtomicLong(),DOWNLOADS=new java.util.concurrent.atomic.AtomicLong(),FUSED=new java.util.concurrent.atomic.AtomicLong();
+    private static final java.util.concurrent.atomic.AtomicLong RESIDENT_BYTES=new java.util.concurrent.atomic.AtomicLong();
+    private static final ThreadLocal<Session> SESSION=new ThreadLocal<>();
+    private static final ThreadLocal<Boolean> CPU_ONLY=ThreadLocal.withInitial(()->false);
     private static volatile String status="GPU not initialized";
     static String status(){return status;}
     static long jobs(){return JOBS.get();}
-    static boolean enabled(){return !System.getProperty("terraforge.gpu","auto").equalsIgnoreCase("cpu");}
+    static long uploadedBytes(){return UPLOADS.get();}static long downloadedBytes(){return DOWNLOADS.get();}static long fusedNodes(){return FUSED.get();}
+    static long residentBytes(){return RESIDENT_BYTES.get();}
+    static void recordFused(int count){FUSED.addAndGet(count);}
+    static boolean enabled(){return !CPU_ONLY.get()&&!System.getProperty("terraforge.gpu","auto").equalsIgnoreCase("cpu");}
+    static boolean deferring(){Session s=SESSION.get();return s!=null&&s.deferred;}
+    static boolean fusing(){Session s=SESSION.get();return s!=null&&!s.retainFields&&s.active&&enabled()&&(!attempted||backend!=null);}
+    static Session begin(int n,boolean retainFields,BooleanSupplier stop){return new Session(n,retainFields,stop);}
+    static final class RetryCpu extends RuntimeException {RetryCpu(Throwable cause){super(cause);}}
+    static final class CpuOnly implements AutoCloseable {final boolean previous=CPU_ONLY.get();CpuOnly(){CPU_ONLY.set(true);}public void close(){CPU_ONLY.set(previous);}}
+    static boolean graphPass(java.util.function.BooleanSupplier job){Session s=SESSION.get();boolean previous=s!=null&&s.deferred;if(s!=null)s.deferred=s.active&&enabled();try{return job.getAsBoolean();}finally{if(s!=null)s.deferred=previous;}}
+    static float[] fusedPass(java.util.function.Supplier<float[]> job){Session s=SESSION.get();boolean previous=s!=null&&s.deferred;if(s!=null)s.deferred=s.active&&enabled();try{return job.get();}finally{if(s!=null)s.deferred=previous;}}
+    static synchronized void cpuBarrier(){Session s=SESSION.get();if(s!=null)s.flush();}
+    static synchronized void cpuBarrier(float[][] inputs,EnvironmentMap environment){Session s=SESSION.get();if(s!=null)s.prepareCpu(inputs,environment);}
+    static synchronized void materialize(float[] input){Session s=SESSION.get();if(s!=null)s.read(input);}
+    private static final class BudgetExceeded extends RuntimeException {}
+    private record Buffer(long handle,long bytes){}
+    private static final class Field {final Buffer buffer;boolean dirty;Field(Buffer buffer,boolean dirty){this.buffer=buffer;this.dirty=dirty;}}
+    /** A graph owns its resident arrays. No data survives evaluation or leaks into another seed/build. */
+    static final class Session implements AutoCloseable {
+        final Session previous=SESSION.get();final boolean retainFields,active;final BooleanSupplier stop;
+        final java.util.IdentityHashMap<float[],Field> fields=new java.util.IdentityHashMap<>();final java.util.ArrayList<Buffer> parameters=new java.util.ArrayList<>();Backend owner;Buffer dummy;boolean deferred;
+        Session(int n,boolean retainFields,BooleanSupplier stop){this.retainFields=retainFields;this.stop=stop;active=n>=512&&enabled()&&!System.getProperty("terraforge.gpuPipeline","true").equalsIgnoreCase("false");SESSION.set(this);}
+        Buffer allocate(long bytes){if(owner.liveBytes+bytes>owner.budget)throw new BudgetExceeded();try(MemoryStack stack=MemoryStack.stackPush()){
+            IntBuffer error=stack.mallocInt(1);long handle=clCreateBuffer(owner.context,CL_MEM_READ_WRITE,Math.max(4,bytes),error);ok(error.get(0));owner.liveBytes+=Math.max(4,bytes);RESIDENT_BYTES.addAndGet(Math.max(4,bytes));return new Buffer(handle,Math.max(4,bytes));}}
+        void release(Buffer buffer){if(buffer!=null){clReleaseMemObject(buffer.handle);owner.liveBytes-=buffer.bytes;RESIDENT_BYTES.addAndGet(-buffer.bytes);}}
+        void select(Backend b){if(owner!=null&&owner!=b&&!fields.isEmpty())throw new RetryCpu(new IllegalStateException("GPU backend changed during evaluation"));owner=b;}
+        long input(float[] data){Field existing=fields.get(data);if(existing!=null)return existing.buffer.handle;
+            Buffer memory=allocate(data.length*4L);try{ok(clEnqueueWriteBuffer(owner.queue,memory.handle,true,0,data,null,null));UPLOADS.addAndGet(data.length*4L);fields.put(data,new Field(memory,false));return memory.handle;}catch(RuntimeException error){release(memory);throw error;}}
+        Field output(float[] data){Buffer memory=allocate(data.length*4L);var field=new Field(memory,false);fields.put(data,field);return field;}
+        long dummy(){if(dummy==null)dummy=allocate(4);return dummy.handle;}
+        void read(float[] data){Field field=fields.get(data);if(field==null||!field.dirty)return;checkStop(stop);
+            if(owner.queue==0)throw new RetryCpu(new IllegalStateException("GPU queue unavailable"));
+            try{ok(clEnqueueReadBuffer(owner.queue,field.buffer.handle,true,0,data,null,null));DOWNLOADS.addAndGet(data.length*4L);field.dirty=false;}catch(RuntimeException error){failed(error);throw new RetryCpu(error);}checkStop(stop);}
+        void flush(){for(float[] data:fields.keySet())read(data);clear();}
+        void prepareCpu(float[][] inputs,EnvironmentMap environment){
+            var needed=java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<float[],Boolean>());java.util.Collections.addAll(needed,inputs);
+            if(environment!=null)java.util.Collections.addAll(needed,environment.height,environment.water,environment.snow,environment.ice,environment.temperature,environment.rain,environment.river,environment.glacier,environment.zoneSource,environment.zoneSlope,environment.zoneNorth,environment.zoneBowl,environment.riverGrad,environment.moisture,environment.shoreDistance);
+            needed.remove(null);for(float[] input:needed)read(input);
+            if(owner!=null&&owner.queue!=0)clFinish(owner.queue);
+            for(float[] input:needed){Field field=fields.remove(input);if(field!=null)release(field.buffer);}
+        }
+        void finish(float[] result,EnvironmentMap environment){synchronized(GpuGeneration.class){
+            if(retainFields){flush();return;}read(result);
+            for(float[] channel:new float[][]{environment.height,environment.water,environment.snow,environment.ice,environment.temperature,environment.rain,environment.river,environment.glacier})if(channel!=null)read(channel);
+        }}
+        void clear(){if(owner!=null&&owner.queue!=0)clFinish(owner.queue);for(Field field:fields.values())release(field.buffer);fields.clear();for(Buffer buffer:parameters)release(buffer);parameters.clear();release(dummy);dummy=null;}
+        public void close(){synchronized(GpuGeneration.class){try{clear();}finally{SESSION.set(previous);}}}
+    }
     private static Backend backend(){if(!attempted){attempted=true;backend=new Backend();status="OpenCL · "+backend.name;}return backend;}
-    private static void failed(Throwable error){if(backend!=null){backend.close();backend=null;}String message=String.valueOf(error.getMessage());String brief=message.lines().findFirst().orElse(error.getClass().getSimpleName());status="CPU fallback · "+brief.substring(0,Math.min(240,brief.length()));System.err.println("Terrain generation: CPU fallback · "+message);}
+    private static void failed(Throwable error){if(backend!=null){backend.close();backend=null;}String message=String.valueOf(error.getMessage());String brief=message.lines().findFirst().orElse(error.getClass().getSimpleName());status="CPU fallback · "+brief.substring(0,Math.min(240,brief.length()));System.err.println("Terrain generation: CPU fallback · "+message);Session s=SESSION.get();if(s!=null&&!s.fields.isEmpty())throw new RetryCpu(error);}
     /** All calls are serialized; region workers never create competing GPU contexts. */
     static synchronized boolean compute(String key,String body,double[] params,float[][] inputs,float[] output,int n,int size,int sea,long seed,BooleanSupplier stop){
         long bytes=output.length*8L;for(float[] input:inputs)if(input!=null)bytes+=input.length*4L;
         if(!enabled()||n<512||bytes>(256L<<20))return false;
         checkStop(stop);
-        try{Backend b=backend();if(b==null||bytes>b.budget)return false;b.compute(key,body,params,inputs,output,n,size,sea,seed,stop);JOBS.incrementAndGet();return true;}
+        try{Backend b=backend();if(b==null||bytes>b.budget)return false;
+            if(deferring()){Session s=SESSION.get();s.select(b);try{b.resident(s,key,body,params,inputs,output,n,size,sea,seed,stop);}catch(BudgetExceeded limit){s.flush();try{b.resident(s,key,body,params,inputs,output,n,size,sea,seed,stop);}catch(BudgetExceeded exhausted){s.flush();return false;}}}
+            else{if(bytes+b.liveBytes>b.budget){Session s=SESSION.get();if(s!=null)s.flush();if(bytes+b.liveBytes>b.budget)return false;}b.compute(key,body,params,inputs,output,n,size,sea,seed,stop);}
+            JOBS.incrementAndGet();return true;}
         catch(CancellationException cancelled){throw cancelled;}
+        catch(RetryCpu retry){throw retry;}
         catch(LinkageError|RuntimeException error){failed(error);return false;}
+    }
+    static synchronized boolean thermalGraph(float[] input,float[] output,int n,int iterations,BooleanSupplier stop){
+        if(!deferring()||iterations<2||input.length*16L>(256L<<20))return false;checkStop(stop);
+        try{Backend b=backend();if(b==null)return false;Session s=SESSION.get();s.select(b);
+            try{b.residentThermal(s,input,output,n,iterations,stop);}catch(BudgetExceeded limit){s.flush();try{b.residentThermal(s,input,output,n,iterations,stop);}catch(BudgetExceeded exhausted){s.flush();return false;}}
+            JOBS.incrementAndGet();return true;
+        }catch(CancellationException cancelled){throw cancelled;}catch(RetryCpu retry){throw retry;}catch(LinkageError|RuntimeException error){failed(error);return false;}
     }
     static synchronized boolean thermal(float[] height,int n,int iterations,BooleanSupplier stop){
         if(!enabled()||n<512||iterations<2||height.length*13L>(256L<<20))return false;
         checkStop(stop);
-        try{Backend b=backend();if(b==null||height.length*13L>b.budget)return false;b.thermal(height,n,iterations,stop);JOBS.incrementAndGet();return true;}
+        try{Backend b=backend();if(b==null||height.length*13L+b.liveBytes>b.budget)return false;b.thermal(height,n,iterations,stop);JOBS.incrementAndGet();return true;}
         catch(CancellationException cancelled){throw cancelled;}
         catch(LinkageError|RuntimeException error){failed(error);return false;}
     }
@@ -40,15 +102,19 @@ final class GpuGeneration {
         try {
             backend();
             if(backend==null)return false;
+            if(deferring()&&GpuNodes.apply(node,new float[0][],output,n,n,sea,seed,null,stop))return true;
+            if(backend==null)return false;
+            if(backend.liveBytes+(4L<<20)>backend.budget)return false;
             backend.generate(node,n,sea,seed,output,stop);JOBS.incrementAndGet();return true;
         }catch(CancellationException cancelled){throw cancelled;}
+        catch(RetryCpu retry){throw retry;}
         catch(LinkageError|RuntimeException error){
             failed(error);return false;
         }
     }
     private static void ok(int code){if(code!=CL_SUCCESS)throw new IllegalStateException("OpenCL error "+code);}
     private static final class Backend {
-        long context,queue,program,kernel,device,budget;String name;
+        long context,queue,program,kernel,device,budget,liveBytes;String name;
         final java.util.Map<String,long[]> compiled=new java.util.LinkedHashMap<>();
         Backend(){
             try(MemoryStack stack=MemoryStack.stackPush()){
@@ -71,7 +137,7 @@ final class GpuGeneration {
                 }
                 if(chosen==0)throw new IllegalStateException("no OpenCL GPU with double precision available");
                 device=chosen;
-                budget=Math.min(256L<<20,bestMemory/4);
+                budget=Math.min(Math.min(256L<<20,bestMemory/4),Math.max(8,Math.min(256,Integer.getInteger("terraforge.gpuBudgetMiB",256)))*1024L*1024);
                 ByteBuffer text=stack.malloc(1024);ok(clGetDeviceInfo(chosen,CL_DEVICE_NAME,text,null));name=MemoryUtil.memUTF8(MemoryUtil.memAddress(text));
                 IntBuffer error=stack.mallocInt(1);
                 context=clCreateContext(stack.pointers(CL_CONTEXT_PLATFORM,platform,0),stack.pointers(chosen),null,0,error);ok(error.get(0));
@@ -96,12 +162,12 @@ final class GpuGeneration {
                     checkStop(stop);int count=Math.min(capacity,output.length-offset);
                     ok(clSetKernelArg1i(kernel,2,offset));ok(clSetKernelArg1i(kernel,3,count));
                     ok(clEnqueueNDRangeKernel(queue,kernel,1,null,stack.pointers(count),null,null,null));
-                    host.clear().limit(count);ok(clEnqueueReadBuffer(queue,buffer,true,0,host,null,null));checkStop(stop);host.get(output,offset,count);
+                    host.clear().limit(count);ok(clEnqueueReadBuffer(queue,buffer,true,0,host,null,null));checkStop(stop);host.get(output,offset,count);DOWNLOADS.addAndGet(count*4L);
                 }
             }finally{if(buffer!=0){clFinish(queue);clReleaseMemObject(buffer);}MemoryUtil.memFree(host);}
         }
         long compile(String key,String source,String function){
-            long[] existing=compiled.get(key);if(existing!=null)return existing[1];
+            long[] existing=compiled.get(key);if(existing!=null){compiled.remove(key);compiled.put(key,existing);return existing[1];}
             try(MemoryStack stack=MemoryStack.stackPush()){
                 IntBuffer error=stack.mallocInt(1);long p=clCreateProgramWithSource(context,source,error);ok(error.get(0));long k=0;
                 try{
@@ -115,22 +181,55 @@ final class GpuGeneration {
         }
         long upload(float[] data){try(MemoryStack stack=MemoryStack.stackPush()){
             IntBuffer error=stack.mallocInt(1);long buffer=clCreateBuffer(context,CL_MEM_READ_WRITE,Math.max(4,data==null?4:data.length*4L),error);ok(error.get(0));
-            try{if(data!=null)ok(clEnqueueWriteBuffer(queue,buffer,true,0,data,null,null));return buffer;}catch(RuntimeException e){clReleaseMemObject(buffer);throw e;}
+            try{if(data!=null){ok(clEnqueueWriteBuffer(queue,buffer,true,0,data,null,null));UPLOADS.addAndGet(data.length*4L);}return buffer;}catch(RuntimeException e){clReleaseMemObject(buffer);throw e;}
         }}
+        String mappingSource(String key,String body,boolean resident){
+            String source=SOURCE+"\n double fclamp(double v,double lo,double hi){return (float)clamp(v,lo,hi); }\n"+
+                "double fractal(double x,double z,ulong seed,int octaves,double persistence){double value=0,amp=1,total=0;for(int o=0;o<octaves;o++){value+=sampleNoise(x,z,seed+(ulong)(o*71))*amp;total+=amp;amp*=persistence;x*=2.0;z*=2.0;}return value/total;}\n"+
+                (key.startsWith("MOUNTAIN:")?GpuMountains.HELPERS:"")+(key.startsWith("ORGANIC_MATERIALS:")?GpuMaterials.helpers()+GpuZones.HELPERS:"");
+            return source+"kernel void mapNode(global float* out,global const float* A,global const float* B,global const float* C,global const double* params,int n,int size,int sea,ulong seed,int offset,int batchCount"+(resident?",int flags":"")+") {int j=get_global_id(0);if(j>=batchCount)return;int oi=j+offset,channel=oi/(n*n),i=oi%(n*n),x=i%n,z=i/n;double a="+(resident?"(flags&1)?A[i]:0":"A[i]")+",b="+(resident?"(flags&2)?B[i]:0":"B[i]")+",c="+(resident?"(flags&4)?C[i]:0":"C[i]")+",value=a;"+body+(resident?"out[oi]":"out[j]")+"=(float)value;}";
+        }
+        void resident(Session session,String key,String body,double[] params,float[][] inputs,float[] output,int n,int size,int sea,long seed,BooleanSupplier stop){
+            long k=compile("resident:"+key,mappingSource(key,body,true),"mapNode");
+            try(MemoryStack stack=MemoryStack.stackPush()){
+                long[] arguments=new long[5];int flags=0;
+                for(int index=0;index<3;index++){
+                    float[] input=index<inputs.length?inputs[index]:null;
+                    if(input==null)arguments[index+1]=session.dummy();else{arguments[index+1]=session.input(input);flags|=1<<index;}
+                }
+                Field destination=session.output(output);arguments[0]=destination.buffer.handle;
+                Buffer parameter=session.allocate(Math.max(8,params.length*8L));session.parameters.add(parameter);arguments[4]=parameter.handle;
+                if(params.length>0){ok(clEnqueueWriteBuffer(queue,parameter.handle,true,0,params,null,null));UPLOADS.addAndGet(params.length*8L);}
+                for(int index=0;index<5;index++)ok(clSetKernelArg1p(k,index,arguments[index]));
+                ok(clSetKernelArg1i(k,5,n));ok(clSetKernelArg1i(k,6,size));ok(clSetKernelArg1i(k,7,sea));ok(clSetKernelArg1l(k,8,seed));ok(clSetKernelArg1i(k,11,flags));
+                for(int offset=0;offset<output.length;offset+=1024*1024){checkStop(stop);int count=Math.min(1024*1024,output.length-offset);ok(clSetKernelArg1i(k,9,offset));ok(clSetKernelArg1i(k,10,count));ok(clEnqueueNDRangeKernel(queue,k,1,null,stack.pointers(count),null,null,null));}
+                destination.dirty=true;
+            }
+        }
+        void residentThermal(Session session,float[] input,float[] output,int n,int iterations,BooleanSupplier stop){
+            long first=compile("thermalFlow",THERMAL,"thermalFlow"),second=compile("thermalGather",THERMAL,"thermalGather");Buffer amount=null,flow=null;
+            try(MemoryStack stack=MemoryStack.stackPush()){
+                long original=session.input(input);Field destination=session.output(output);
+                amount=session.allocate(input.length*4L);flow=session.allocate(input.length*4L);
+                ok(clEnqueueCopyBuffer(queue,original,destination.buffer.handle,0,0,input.length*4L,null,null));
+                for(long k:new long[]{first,second}){ok(clSetKernelArg1p(k,0,destination.buffer.handle));ok(clSetKernelArg1p(k,1,amount.handle));ok(clSetKernelArg1p(k,2,flow.handle));ok(clSetKernelArg1i(k,3,n));}
+                for(int pass=0;pass<iterations;pass++){checkStop(stop);ok(clEnqueueNDRangeKernel(queue,first,1,null,stack.pointers(input.length),null,null,null));ok(clEnqueueNDRangeKernel(queue,second,1,null,stack.pointers(input.length),null,null,null));ok(clFinish(queue));}
+                destination.dirty=true;
+            }finally{if(queue!=0)clFinish(queue);session.release(amount);session.release(flow);}
+        }
         void compute(String key,String body,double[] params,float[][] inputs,float[] output,int n,int size,int sea,long seed,BooleanSupplier stop){
-            String source=SOURCE+"\n double fclamp(double v,double lo,double hi){return (float)clamp(v,lo,hi); }\n"+"\n double fractal(double x,double z,ulong seed,int octaves,double persistence){double value=0,amp=1,total=0;for(int o=0;o<octaves;o++){value+=sampleNoise(x,z,seed+(ulong)(o*71))*amp;total+=amp;amp*=persistence;x*=2.0;z*=2.0;}return value/total;}\n"+
-                (key.startsWith("MOUNTAIN:")?GpuMountains.HELPERS:"")+(key.startsWith("ORGANIC_MATERIALS:")?GpuMaterials.helpers()+GpuZones.HELPERS:"")+"kernel void mapNode(global float* out,global const float* A,global const float* B,global const float* C,global const double* params,int n,int size,int sea,ulong seed,int offset,int batchCount){int j=get_global_id(0);if(j>=batchCount)return;int oi=j+offset,channel=oi/(n*n),i=oi%(n*n),x=i%n,z=i/n;double a=A[i],b=B[i],c=C[i],value=a;"+body+"out[j]=(float)value;}";
+            String source=mappingSource(key,body,false);
             long k=compile(key,source,"mapNode");long[] buffers=new long[5];
             try(MemoryStack stack=MemoryStack.stackPush()){
                 IntBuffer error=stack.mallocInt(1);int capacity=Math.min(output.length,1024*1024);
                 buffers[0]=clCreateBuffer(context,CL_MEM_WRITE_ONLY,capacity*4L,error);ok(error.get(0));
                 for(int i=0;i<3;i++){float[] data=i<inputs.length?inputs[i]:null;buffers[i+1]=data==null&&i>0?buffers[1]:upload(data==null?new float[output.length]:data);}
                 buffers[4]=clCreateBuffer(context,CL_MEM_READ_ONLY,Math.max(8,params.length*8L),error);ok(error.get(0));
-                if(params.length>0)ok(clEnqueueWriteBuffer(queue,buffers[4],true,0,params,null,null));
+                if(params.length>0){ok(clEnqueueWriteBuffer(queue,buffers[4],true,0,params,null,null));UPLOADS.addAndGet(params.length*8L);}
                 for(int i=0;i<5;i++)ok(clSetKernelArg1p(k,i,buffers[i]));ok(clSetKernelArg1i(k,5,n));ok(clSetKernelArg1i(k,6,size));ok(clSetKernelArg1i(k,7,sea));ok(clSetKernelArg1l(k,8,seed));
                 FloatBuffer host=MemoryUtil.memAllocFloat(capacity);
                 try{for(int offset=0;offset<output.length;offset+=capacity){checkStop(stop);int count=Math.min(capacity,output.length-offset);ok(clSetKernelArg1i(k,9,offset));ok(clSetKernelArg1i(k,10,count));
-                    ok(clEnqueueNDRangeKernel(queue,k,1,null,stack.pointers(count),null,null,null));host.clear().limit(count);ok(clEnqueueReadBuffer(queue,buffers[0],true,0,host,null,null));checkStop(stop);host.get(output,offset,count);
+                    ok(clEnqueueNDRangeKernel(queue,k,1,null,stack.pointers(count),null,null,null));host.clear().limit(count);ok(clEnqueueReadBuffer(queue,buffers[0],true,0,host,null,null));checkStop(stop);host.get(output,offset,count);DOWNLOADS.addAndGet(count*4L);
                 }}finally{MemoryUtil.memFree(host);}
             }finally{clFinish(queue);var released=new java.util.HashSet<Long>();for(long buffer:buffers)if(buffer!=0&&released.add(buffer))clReleaseMemObject(buffer);}
         }
@@ -140,7 +239,7 @@ final class GpuGeneration {
                 buffers[0]=upload(height);buffers[1]=upload(new float[height.length]);buffers[2]=upload(new float[height.length]);
                 for(long k:new long[]{first,second}){for(int i=0;i<3;i++)ok(clSetKernelArg1p(k,i,buffers[i]));ok(clSetKernelArg1i(k,3,n));}
                 for(int pass=0;pass<iterations;pass++){checkStop(stop);ok(clEnqueueNDRangeKernel(queue,first,1,null,stack.pointers(height.length),null,null,null));ok(clEnqueueNDRangeKernel(queue,second,1,null,stack.pointers(height.length),null,null,null));ok(clFinish(queue));}
-                checkStop(stop);float[] result=new float[height.length];ok(clEnqueueReadBuffer(queue,buffers[0],true,0,result,null,null));checkStop(stop);System.arraycopy(result,0,height,0,height.length);
+                checkStop(stop);float[] result=new float[height.length];ok(clEnqueueReadBuffer(queue,buffers[0],true,0,result,null,null));checkStop(stop);System.arraycopy(result,0,height,0,height.length);DOWNLOADS.addAndGet(height.length*4L);
             }finally{clFinish(queue);for(long buffer:buffers)if(buffer!=0)clReleaseMemObject(buffer);}
         }
         void close(){if(queue!=0)clFinish(queue);for(long[] item:compiled.values()){clReleaseKernel(item[1]);clReleaseProgram(item[0]);}compiled.clear();if(kernel!=0)clReleaseKernel(kernel);if(program!=0)clReleaseProgram(program);if(queue!=0)clReleaseCommandQueue(queue);if(context!=0)clReleaseContext(context);kernel=program=queue=context=0;}

@@ -66,19 +66,37 @@ final class TerrainGraph {
     private void cycle(int id,Set<Integer> done,Set<Integer> visiting){if(done.contains(id))return;if(!visiting.add(id))throw new IllegalArgumentException("Connection would create a cycle.");for(int source:nodes.get(id).input)if(source!=-1)cycle(source,done,visiting);visiting.remove(id);done.add(id);}
     void requireInputs(int id,Set<Integer> seen){if(!seen.add(id))return;Node n=nodes.get(id);if(n==null)throw new IllegalArgumentException("Add a World output node.");for(int j=0;j<n.input.length;j++){if(n.input[j]<0){if(n.type.optional(j))continue;throw new IllegalArgumentException(n.title()+": connect "+n.type.port(j)+".");}requireInputs(n.input[j],seen);}if(n.values.containsKey("min")&&n.p("min")>=n.p("max"))throw new IllegalArgumentException(n.title()+": minimum must be below maximum.");}
     record Result(float[] output,Map<Integer,float[]> fields,EnvironmentMap environment,Map<Integer,EnvironmentMap> environments){}
-    Result evaluate(int resolution,int worldSize,int sea,long seed,int target,BooleanSupplier cancelled){MapLimits.checkMemory(resolution,nodes.size(),nodes.values().stream().anyMatch(v->v.type==Type.RIVERS||v.type==Type.LAKE));validateStructure();requireInputs(target,new HashSet<>());HashMap<Integer,float[]> cache=new HashMap<>();Map<Integer,EnvironmentMap> envs=new HashMap<>();float[] result=evaluateNode(target,resolution,worldSize,sea,seed,cache,envs,cancelled);return new Result(result,cache,envs.get(target),envs);}
+    Result evaluate(int resolution,int worldSize,int sea,long seed,int target,BooleanSupplier cancelled){return evaluate(resolution,worldSize,sea,seed,target,cancelled,true);}
+    /** Builds need final channels only; node previews retain all intermediate fields. */
+    Result evaluateForBuild(int resolution,int worldSize,int sea,long seed,int target,BooleanSupplier cancelled){return evaluate(resolution,worldSize,sea,seed,target,cancelled,false);}
+    private Result evaluate(int resolution,int worldSize,int sea,long seed,int target,BooleanSupplier cancelled,boolean retainFields){
+        MapLimits.checkMemory(resolution,nodes.size(),nodes.values().stream().anyMatch(v->v.type==Type.RIVERS||v.type==Type.LAKE));validateStructure();requireInputs(target,new HashSet<>());
+        try(var session=GpuGeneration.begin(resolution,retainFields,cancelled)){
+            HashMap<Integer,float[]> cache=new HashMap<>();Map<Integer,EnvironmentMap> envs=new HashMap<>();float[] result=evaluateNode(target,resolution,worldSize,sea,seed,cache,envs,cancelled);
+            EnvironmentMap environment=envs.get(target);session.finish(result,environment);
+            return retainFields?new Result(result,cache,environment,envs):new Result(result,Map.of(target,result),environment,Map.of(target,environment));
+        }catch(GpuGeneration.RetryCpu failure){try(var fallback=new GpuGeneration.CpuOnly()){return evaluate(resolution,worldSize,sea,seed,target,cancelled,retainFields);}}
+    }
     private float[] evaluateNode(int id,int n,int worldSize,int sea,long seed,Map<Integer,float[]> cache,Map<Integer,EnvironmentMap> envs,BooleanSupplier cancelled){
-        if(cancelled.getAsBoolean())throw new java.util.concurrent.CancellationException();if(cache.containsKey(id))return cache.get(id);Node node=nodes.get(id);float[][] inputs=new float[node.input.length][];for(int j=0;j<inputs.length;j++)if(node.input[j]>=0)inputs[j]=evaluateNode(node.input[j],n,worldSize,sea,seed,cache,envs,cancelled);
+        if(cancelled.getAsBoolean())throw new java.util.concurrent.CancellationException();if(cache.containsKey(id))return cache.get(id);Node node=nodes.get(id);
+        if(GpuGeneration.fusing()){
+            float[] fused=GpuGeneration.fusedPass(()->GpuFusion.evaluate(this,id,n,worldSize,sea,seed,cancelled));
+            if(fused!=null){cache.put(id,fused);envs.put(id,new EnvironmentMap(fused));return fused;}
+        }
+        float[][] inputs=new float[node.input.length][];for(int j=0;j<inputs.length;j++)if(node.input[j]>=0)inputs[j]=evaluateNode(node.input[j],n,worldSize,sea,seed,cache,envs,cancelled);
         EnvironmentMap base=node.input.length>0&&node.input[0]>=0?envs.get(node.input[0]):new EnvironmentMap(new float[n*n]);
+        if(node.type==Type.ORGANIC_MATERIALS||node.type==Type.RIVER_BANKS||node.type==Type.TERRAIN_DETAIL||node.type==Type.ROCKS||node.type==Type.TREES||EnvironmentNodes.handles(node.type))GpuGeneration.cpuBarrier(inputs,base);
         if(node.type==Type.ORGANIC_MATERIALS){EnvironmentMap env=OrganicMaterials.apply(node,base,n,worldSize,sea,seed,0,0,cancelled);cache.put(id,env.height);envs.put(id,env);return env.height;}
         if(node.type==Type.RIVER_BANKS){EnvironmentMap env=RiverBanks.apply(node,base,n,worldSize,sea,seed,0,0,cancelled);cache.put(id,env.height);envs.put(id,env);return env.height;}
         if(node.type==Type.TERRAIN_DETAIL){EnvironmentMap env=TerrainDetail.apply(node,base,n,worldSize,sea,seed,0,0,cancelled);cache.put(id,env.height);envs.put(id,env);return env.height;}
         if(node.type==Type.ROCKS){EnvironmentMap env=RockNodes.apply(node,base,inputs[1],n,worldSize,sea,seed,cancelled);cache.put(id,env.height);envs.put(id,env);return env.height;}
         if(node.type==Type.TREES){EnvironmentMap env=TreeLibrary.scatter(node,base,inputs[1],n,worldSize,sea,seed,cancelled);cache.put(id,env.height);envs.put(id,env);return env.height;}
         if(EnvironmentNodes.handles(node.type)){EnvironmentMap climate=node.input.length>1&&node.input[1]>=0?envs.get(node.input[1]):null;EnvironmentMap env=EnvironmentNodes.apply(node,base,climate,n,worldSize,sea,seed,cancelled);if(climate!=null){env.temperature=climate.temperature;env.rain=climate.rain;}float[] data=EnvironmentNodes.field(node.type,env,n,sea);cache.put(id,data);envs.put(id,env);return data;}
-        float[] out=new float[n*n];Type type=node.type;float[] seaDistance=type==Type.MOUNTAIN&&node.p("coastalReach")>0?EnvironmentNodes.distanceToSea(inputs[0],n,sea,cancelled):null;
-        if(GpuGeneration.generate(node,n,sea,seed,out,cancelled)){}
-        else if(GpuNodes.apply(node,inputs,out,n,worldSize,sea,seed,seaDistance,cancelled)){}
+        float[] out=new float[n*n];Type type=node.type;if(type==Type.MOUNTAIN&&node.p("coastalReach")>0)GpuGeneration.materialize(inputs[0]);float[] seaDistance=type==Type.MOUNTAIN&&node.p("coastalReach")>0?EnvironmentNodes.distanceToSea(inputs[0],n,sea,cancelled):null;
+        final float[] gpuOutput=out;
+        boolean accelerated=GpuGeneration.graphPass(()->type==Type.EROSION?GpuGeneration.thermalGraph(inputs[0],gpuOutput,n,(int)node.p("iterations"),cancelled):GpuGeneration.generate(node,n,sea,seed,gpuOutput,cancelled)||GpuNodes.apply(node,inputs,gpuOutput,n,worldSize,sea,seed,seaDistance,cancelled));
+        if(!accelerated)GpuGeneration.cpuBarrier(inputs,base);
+        if(accelerated){}
         else if(type==Type.HYDRAULIC)out=HydraulicErosion.apply(inputs[0],n,worldSize,sea,node,seed,cancelled);
         else if(type==Type.EROSION){TerraForge.World w=new TerraForge.World(n,sea,seed);w.height=inputs[0].clone();ThermalErosion.apply(w,(int)node.p("iterations"),cancelled);out=w.height;}
         else {final float[] output=out;CpuWork.rows(n,n,cancelled,z->{for(int x=0;x<n;x++){int i=z*n+x;double a=inputs.length>0&&inputs[0]!=null?inputs[0][i]:0,value=0;

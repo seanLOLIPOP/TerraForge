@@ -1,4 +1,4 @@
-# TerraForge v0.1.13
+# TerraForge v0.1.14
 
 Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for Linux, macOS, and Windows.
 
@@ -6,7 +6,7 @@ Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for L
 
 [Published Windows releases](https://github.com/seanLOLIPOP/TerraForge/releases)
 
-Extract `TerraForge-v0.1.13-Windows-x64.zip` completely and open `TerraForge.exe`.
+Extract `TerraForge-v0.1.14-Windows-x64.zip` completely and open `TerraForge.exe`.
 The Windows x64 package includes Java 21 and Windows LWJGL natives. No Java install
 or administrator rights are needed. GPU views require OpenGL 3.3 graphics drivers.
 Minecraft saves default to `%APPDATA%\.minecraft\saves`. Run
@@ -120,3 +120,8 @@ precision are required for acceleration; the app still works using the CPU when
 they are unavailable. NVIDIA and AMD hardware were tested; Intel is supported by
 the same API but has not been hardware-tested. See [GPU validation](docs/GPU-GENERATION-VALIDATION.md)
 for covered stages, measured results, limits, and advanced options.
+
+GPU graph builds now keep compatible intermediate maps on the device and fuse
+closed groups of scalar nodes. Only final channels are downloaded for builds;
+node previews retain intermediate fields. See [GPU pipeline validation](docs/GPU-PIPELINE-VALIDATION.md)
+for measured improvements and limitations.

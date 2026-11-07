@@ -1,4 +1,4 @@
-TerraForge 0.1.13 - Windows x64 portable edition
+TerraForge 0.1.14 - Windows x64 portable edition
 
 Extract the entire ZIP to a writable folder, then open TerraForge.exe.
 Java 21 is included. No Java installation or administrator access is required.
@@ -54,3 +54,7 @@ GPU generation: Nodes > Generation > Auto (recommended), GPU, or CPU.
 GPU info shows the selected backend. GPU acceleration requires an OpenCL 1.2
 driver with double precision; unsupported devices automatically use the CPU.
 No CUDA toolkit is required. First use includes shader compilation.
+
+Version 0.1.14 keeps connected terrain stages on the GPU and combines compatible
+node passes during builds. Use Generation: Auto for the recommended balance.
+CPU-only stages and saving still use the CPU. First use compiles GPU programs.

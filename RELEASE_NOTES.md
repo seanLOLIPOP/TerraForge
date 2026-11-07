@@ -1,3 +1,18 @@
+# TerraForge v0.1.14 — Faster GPU graph builds
+
+- Compatible connected terrain nodes keep their intermediate maps on the GPU,
+  including thermal erosion. CPU stages synchronize the inputs they require.
+- Closed groups of noise/ridges, island/relief, remap/clamp/terrace/blend/mask,
+  constant, and output nodes can run as one GPU pass during builds. Explicit
+  float rounding and clamping preserve each node's mathematical boundary.
+- Builds download final channels; live node previews still return every field.
+- Shared branches remain separately cached and erosion preserves input maps.
+- GPU working buffers are limited across active evaluations. Memory pressure
+  materializes fields and uses the existing GPU or CPU fallback paths.
+- If a GPU failure loses resident data, evaluation restarts on CPU. Cancellation
+  drains queued work and releases the graph's buffers.
+- Use Nodes > Generation > Auto. Region compression and disk writes stay on CPU.
+
 # TerraForge v0.1.13 — Vendor-neutral GPU terrain generation
 
 - Nodes adds Generation: Auto, GPU, and CPU, plus GPU info. Auto is recommended:
