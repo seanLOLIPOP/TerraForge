@@ -2,6 +2,9 @@ import java.util.*;
 /** Resolve accidental intersections as real endpoint junctions, never X crossings. */
 final class RiverJunctions {
  static List<RiverRibbon.Point> fit(List<RiverRibbon.Point> points,RiverRibbon.Network network){
+  return fit(points,network,0);
+ }
+ static List<RiverRibbon.Point> fit(List<RiverRibbon.Point> points,RiverRibbon.Network network,double padding){
   if(points.size()<2)return points;var space=new RiverBranchSpace(network);int owner=space.owner();
   var out=new ArrayList<RiverRibbon.Point>();out.add(points.get(0));double arc=0;var root=points.get(0);
   for(int k=1;k<points.size();k++){
@@ -26,7 +29,21 @@ final class RiverJunctions {
     else{double gap=p.radius()+target.radius()+8,t=Math.max(0,first-gap/Math.max(.001,length));if(t>0)out.add(RiverRibbon.lerp(a,b,t));}
     break;
    }
-   if(arc>64){var contact=space.contact(b.x(),b.z(),b.radius(),owner,arc,root);if(contact!=null&&contact.owner()!=owner&&contact.clearance()<4&&Math.abs(b.water()-contact.point().water())>3)break;if(contact!=null&&contact.owner()!=owner&&contact.wet()&&contact.clearance()<0&&Math.abs(b.water()-contact.point().water())<=3){var p=contact.point();var joined=new RiverRibbon.Point(p.x(),p.z(),b.radius(),p.water(),b.discharge());if(!space.crosses(a,joined)){out.add(joined);break;}}}
+   // Bank contact matters even when the centerlines never cross. Do not exempt
+   // the first 64 blocks: a source beside an existing channel can form a loop there.
+   var contact=space.contact(b.x(),b.z(),b.radius()+padding,owner,arc,null);
+   if(contact!=null&&contact.clearance()<2){
+    if(contact.owner()==owner){
+     // Erase a near-self loop, retaining the downstream continuation rather than
+     // leaving both sides of a closed water polygon in the rasterized map.
+     int cut=-1;double nearest=Double.POSITIVE_INFINITY;
+     for(int j=1;j<out.size();j++){var u=out.get(j-1);var v=out.get(j);double dx=v.x()-u.x(),dz=v.z()-u.z(),t=Math.max(0,Math.min(1,((contact.point().x()-u.x())*dx+(contact.point().z()-u.z())*dz)/Math.max(.000001,dx*dx+dz*dz))),d=Math.hypot(u.x()+t*dx-contact.point().x(),u.z()+t*dz-contact.point().z());if(d<nearest){nearest=d;cut=j;}}
+     if(cut>0&&cut<out.size()-1){while(out.size()>cut)out.remove(out.size()-1);space=new RiverBranchSpace(network);owner=space.owner();arc=0;for(int j=1;j<out.size();j++){space.add(out.get(j-1),out.get(j),owner,arc);arc+=Math.hypot(out.get(j).x()-out.get(j-1).x(),out.get(j).z()-out.get(j-1).z());}k--;continue;}
+    }else{
+     if(contact.wet()&&Math.abs(b.water()-contact.point().water())<=3){var p=contact.point();var joined=new RiverRibbon.Point(p.x(),p.z(),b.radius(),p.water(),b.discharge());if(!space.crosses(a,joined))out.add(joined);}
+     break;
+    }
+   }
    out.add(b);space.add(a,b,owner,arc);arc+=length;
   }
   return List.copyOf(out);

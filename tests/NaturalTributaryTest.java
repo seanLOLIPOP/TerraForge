@@ -10,6 +10,11 @@ public class NaturalTributaryTest {
    var node=new TerrainGraph.Node(9,TerrainGraph.Type.RIVERS,0,0);node.values.put("sources",2.0);node.values.put("mountainForks",8.0);node.values.put("branchReach",1.2);node.values.put("forkLength",128.0);node.values.put("riverSpacing",128.0);node.values.put("headwater",100.0);
    var e=EnvironmentNodes.apply(node,new EnvironmentMap(h),null,n,size,62,seed,()->false);
    check(e.mountainArms.size()>e.forkRoots,"tributaries retain branching");
+   int mainCount=e.ribbons.segments.size()-e.mountainArms.stream().mapToInt(a->a.points().size()-1).sum();
+   for(var arm:e.mountainArms)for(var p:arm.points()){
+    boolean junction=false;for(var f:e.mountainForks)if(f.generation()==0&&Math.hypot(p.x()-f.x(),p.z()-f.z())<64)junction=true;if(junction)continue;
+    for(int i=0;i<mainCount;i++){var segment=e.ribbons.segments.get(i);var a=segment.a();var b=segment.b();double dx=b.x()-a.x(),dz=b.z()-a.z(),t=Math.max(0,Math.min(1,((p.x()-a.x())*dx+(p.z()-a.z())*dz)/Math.max(.000001,dx*dx+dz*dz))),clearance=Math.hypot(p.x()-a.x()-t*dx,p.z()-a.z()-t*dz)-p.radius()-a.radius()-(b.radius()-a.radius())*t;check(clearance>=16-1e-6,"tributary bank gap away from junction: "+clearance+" at "+p+" near "+a+" -> "+b);}
+   }
    var parents=new HashMap<String,String>();var segments=new ArrayList<RiverRibbon.Segment>();
    for(var arm:e.mountainArms)for(int i=1;i<arm.points().size();i++){
     var a=arm.points().get(i-1);var b=arm.points().get(i);

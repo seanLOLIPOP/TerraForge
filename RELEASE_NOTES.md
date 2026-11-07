@@ -1,3 +1,14 @@
+# TerraForge v0.1.25 - River bank collision checks
+
+- Merge incoming channels on bank contact, including contacts near their source.
+- Remove near-self loops even when channel centerlines do not cross.
+- Include coarse layout cell width when fitting main river junctions.
+- Leave a larger dry gap between tributaries and unrelated channels so short
+  headwater ends do not visually reconnect into triangular webs.
+- Restrict junction exemptions to connected channels and check neighboring spatial buckets.
+- Preserve local island splits, seasonal endings and left-side density controls.
+- Start a new map build to replace old generated river geometry.
+
 # TerraForge v0.1.24 - Converging river tributaries
 
 - Replace downstream recursive split/rejoin webs with upstream-grown tributary trees.

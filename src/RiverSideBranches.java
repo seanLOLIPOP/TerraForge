@@ -17,7 +17,7 @@ final class RiverSideBranches {
     for(int j=-4;j<=4;j++){double a=heading+j*.12,xx=x+Math.cos(a)*8,zz=z+Math.sin(a)*8;if(xx<2*block||zz<2*block||xx>size-2*block||zz>size-2*block)continue;
      double h=RiverShape.height(terrain,n,xx/block,zz/block),slope=Math.abs(h-lastHeight)/8;int cell=NaturalRivers.clamp((int)Math.round(zz/block),n)*n+NaturalRivers.clamp((int)Math.round(xx/block),n);
      if(spill[cell]-terrain[cell]>1.5||slope>maximumSlope||RiverCourse.terrainSlope(terrain,n,xx/block,zz/block,block)>maximumSlope||(natural?h<ground-steps*8*maximumSlope||h>lastHeight+.2:h<ground-1||h>ground+10))continue;var safe=NaturalRivers.safe(xx/block,zz/block,new double[]{x/block,z/block},terrain,spill,n,true);if(Math.abs(safe[0]-xx/block)>.001||Math.abs(safe[1]-zz/block)>.001)continue;
-     var candidate=new RiverRibbon.Point(xx,zz,initialRadius,start.water());var contact=space.contact(xx,zz,initialRadius,owner,k*8,start);if(k>6&&contact!=null&&contact.clearance()<4||space.crosses(points.get(points.size()-1),candidate))continue;
+     var candidate=new RiverRibbon.Point(xx,zz,initialRadius,start.water());var contact=space.contact(xx,zz,initialRadius,owner,k*8,start);if(k>6&&contact!=null&&contact.clearance()<(natural?Math.max(16,block*2):4)||space.crosses(points.get(points.size()-1),candidate))continue;
      double target=ground+k*(natural?-.12:.22),score=Math.abs(h-target)+j*j*.035+Math.max(0,lastHeight-h)*2;
      if(score<best){best=score;bx=xx;bz=zz;angle=a;bh=h;found=true;}
     }
