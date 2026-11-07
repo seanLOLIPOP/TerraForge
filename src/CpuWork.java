@@ -19,10 +19,20 @@ final class CpuWork {
     static void region(RegionJob job)throws Exception{boolean previous=SERIAL_ROWS.get();SERIAL_ROWS.set(true);try{job.run();}finally{SERIAL_ROWS.set(previous);}}
     /** Drain workers before callers restore shared generation state, including cancellation and failure. */
     static void regions(int count,int threads,BooleanSupplier stop,RegionConsumer job)throws Exception{
+        regions(count,threads,()->threads,stop,job);
+    }
+    static void regions(int count,int threads,IntSupplier allowed,BooleanSupplier stop,RegionConsumer job)throws Exception{
+        class Admission {
+            int active;
+            synchronized void enter()throws InterruptedException{while(active>=Math.max(1,Math.min(threads,allowed.getAsInt()))){if(stop.getAsBoolean())throw new CancellationException();wait(100);}active++;}
+            synchronized void leave(){active--;notifyAll();}
+        }
+        var admission=new Admission();
+        String generationMode=GpuGeneration.mode();boolean fastAlgorithms=FastGpu.requested();int encodingLevel=RegionBatchWriter.compressionLevel();
         var pool=Executors.newFixedThreadPool(Math.min(count,threads),r->{var thread=new Thread(r,"TerraForge-region-"+IDS.incrementAndGet());thread.setDaemon(true);return thread;});
         var jobs=new java.util.ArrayList<Future<?>>();boolean interrupted=false;
         try{
-            for(int i=0;i<count;i++){int index=i;jobs.add(pool.submit(()->{if(stop.getAsBoolean()||Thread.currentThread().isInterrupted())throw new CancellationException();if(Math.min(count,threads)==1)job.accept(index);else region(()->job.accept(index));return null;}));}
+            for(int i=0;i<count;i++){int index=i;jobs.add(pool.submit(()->{try(var mode=new GpuGeneration.ModeScope(generationMode);var fast=FastGpu.scope(fastAlgorithms);var compression=new RegionBatchWriter.LevelScope(encodingLevel)){if(stop.getAsBoolean()||Thread.currentThread().isInterrupted())throw new CancellationException();admission.enter();try{if(Math.min(count,threads)==1||allowed.getAsInt()==1)job.accept(index);else region(()->job.accept(index));}finally{admission.leave();}return null;}}));}
             pool.shutdown();for(var task:jobs)task.get();
         }catch(InterruptedException error){interrupted=true;throw new CancellationException();}
         catch(ExecutionException error){if(error.getCause() instanceof Exception cause)throw cause;throw new IllegalStateException(error.getCause());}

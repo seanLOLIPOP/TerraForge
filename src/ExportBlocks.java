@@ -32,6 +32,7 @@ final class ExportBlocks {
     static final class Column {
         final int h,mat,water,snow,ice,glacier,soil,x,z,solidBelow,airAbove;
         final long seed;
+        float[] gpu;int stride,offset;
         private boolean cached;
         private double warp,region;
         Column(int h,int mat,int water,int snow,int ice,int glacier,int soil,int x,int z,long seed){
@@ -45,6 +46,7 @@ final class ExportBlocks {
             if(y>airAbove)return 0;
             int value=ExportBlocks.block(h,mat,water,snow,ice,glacier,y,soil);
             if(y>=h||y<=STRATA_FLOOR||y<h-STRATA_DEPTH||!(value==3||mountainRock(mat)&&value>=1000000))return value;
+            if(gpu!=null)return (int)gpu[(h-y-1)*stride+offset];
             if(!cached){warp=(TerraForge.sample(x/70.,z/70.,seed+6101)-.5)*24;region=TerraForge.sample(x/520.,z/520.,seed+6113);cached=true;}
             return strata(x,y,z,seed,warp,region);
         }

@@ -8,6 +8,7 @@ import java.util.function.BooleanSupplier;
  */
 final class HydraulicErosion {
     static float[] apply(float[] input,int n,int worldSize,int sea,TerrainGraph.Node node,long worldSeed,BooleanSupplier stop){
+        float[] accelerated=FastGpu.erosion(input,n,worldSize,sea,node,worldSeed,stop);if(accelerated!=null)return accelerated;
         double cell=worldSize/(double)n;
         double droplets=node.p("iterations")/10.0,erodeSpeed=.035*node.p("strength"),depositSpeed=.05+.4*node.p("deposition"),maxCut=node.p("maxDepth")/cell;
         int count=n*n;

@@ -19,10 +19,10 @@ foreach ($module in @('lwjgl','lwjgl-glfw','lwjgl-opengl')) {
 }
 Copy-Item -Path "$root/lib/licenses/*" -Destination "$inputDir/lib/licenses/" -Recurse
 $runtime = Join-Path $stage 'runtime'
-& "$JdkHome/bin/jlink.exe" --add-modules java.desktop,java.logging,java.management,jdk.management,java.naming,jdk.unsupported --strip-debug --no-header-files --no-man-pages --compress=2 --output $runtime
+& "$JdkHome/bin/jlink.exe" --add-modules java.desktop,java.logging,java.management,jdk.management,java.naming,jdk.unsupported,jdk.incubator.vector --strip-debug --no-header-files --no-man-pages --compress=2 --output $runtime
 if ($LASTEXITCODE) { throw 'Runtime creation failed.' }
 $output = Join-Path $stage 'image'
-& "$JdkHome/bin/jpackage.exe" --type app-image --name TerraForge --app-version $version --vendor TerraForge --description 'Minecraft Java terrain editor' --input $inputDir --main-jar TerraForge.jar --main-class TerraForge --runtime-image $runtime --dest $output --java-options '-XX:MaxRAMPercentage=70' --java-options '-Dterraforge.home=$APPDIR/..'
+& "$JdkHome/bin/jpackage.exe" --type app-image --name TerraForge --app-version $version --vendor TerraForge --description 'Minecraft Java terrain editor' --input $inputDir --main-jar TerraForge.jar --main-class TerraForge --runtime-image $runtime --dest $output --java-options '-XX:MaxRAMPercentage=70' --java-options '--add-modules=jdk.incubator.vector' --java-options '-Dterraforge.home=$APPDIR/..'
 if ($LASTEXITCODE) { throw 'Windows launcher creation failed.' }
 $app = Join-Path $output 'TerraForge'
 foreach ($file in @('VERSION','FEATURE_GUIDE.md','RELEASE_NOTES.md','THIRD_PARTY_NOTICES.md')) {

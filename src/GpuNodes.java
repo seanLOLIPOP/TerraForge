@@ -7,7 +7,7 @@ final class GpuNodes {
         String code=operation(node,inputs.length>2&&inputs[2]!=null,seaDistance!=null);
         if(code==null)return false;
         boolean cheap=switch(node.type){case CONSTANT,REMAP,CLAMP,TERRACE,HEIGHT_MASK,SLOPE_MASK,BLEND,OUTPUT->true;default->false;};
-        if(cheap&&!GpuGeneration.deferring()&&!System.getProperty("terraforge.gpu","auto").equalsIgnoreCase("gpu"))return false;
+        if(cheap&&!GpuGeneration.deferring()&&!GpuGeneration.mode().equalsIgnoreCase("gpu"))return false;
         code+="value=clamp(value,"+(node.type.mask?"0.0,1.0":"-60.0,1024.0")+");";
         if(node.type==TerrainGraph.Type.MOUNTAIN)inputs=new float[][]{inputs[0],seaDistance};
         return compute(node,code,inputs,out,n,size,sea,seed,stop);

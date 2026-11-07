@@ -13,7 +13,7 @@ final class RegionMap {
     static final int CELL=8,WINDOW=1536;
     /** Part of the build folder key. Change only when region files must be rebuilt, not on every app release. */
     static final String BUILD_FORMAT="0.1.13-gpu";
-    final Path folder;final int size,sea,buildHeight;final long seed;final TerrainGraph graph;final EnvironmentMap layout;
+    final int encodingLevel=RegionBatchWriter.compressionLevel();final String generationMode=GpuGeneration.mode();final boolean fastAlgorithms=FastGpu.requested();final Path folder;final int size,sea,buildHeight;final long seed;final TerrainGraph graph;final EnvironmentMap layout;
     private final LinkedHashMap<Long,TerraForge.World> tiles=new LinkedHashMap<>(16,.75f,true){protected boolean removeEldestEntry(Map.Entry<Long,TerraForge.World> e){return size()>9;}};
     RegionMap(Path folder,int size,long seed,int sea,TerrainGraph graph,EnvironmentMap layout,int buildHeight){this.folder=folder;this.size=size;this.seed=seed;this.sea=sea;this.graph=graph;this.layout=layout;this.buildHeight=buildHeight;}
 
@@ -21,19 +21,20 @@ final class RegionMap {
     static Path folderFor(TerrainGraph recipe,int size,long seed,int sea)throws Exception{
         var bytes=new ByteArrayOutputStream();Path tmp=Files.createTempFile("terraforge-key-",".tgraph");
         try{GraphEditor.writeFile(recipe,tmp);bytes.write(Files.readAllBytes(tmp));}finally{Files.deleteIfExists(tmp);}
-        bytes.write((size+"|"+seed+"|"+sea+"|"+BUILD_FORMAT+"|"+System.getProperty("terraforge.gpu","auto").toLowerCase(Locale.ROOT)+"|"+System.getProperty("terraforge.gpuDevice","").toLowerCase(Locale.ROOT)).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        bytes.write((size+"|"+seed+"|"+sea+"|"+BUILD_FORMAT+(FastGpu.requested()?"|fast-gpu-v1":"")+(RegionBatchWriter.compressionLevel()==1?"":"|compression="+RegionBatchWriter.compressionLevel())+"|"+System.getProperty("terraforge.gpu","auto").toLowerCase(Locale.ROOT)+"|"+System.getProperty("terraforge.gpuDevice","").toLowerCase(Locale.ROOT)).getBytes(java.nio.charset.StandardCharsets.UTF_8));
         byte[] d=MessageDigest.getInstance("SHA-256").digest(bytes.toByteArray());StringBuilder h=new StringBuilder();for(int i=0;i<6;i++)h.append(String.format("%02x",d[i]));
         String root=System.getProperty("terraforge.regionBuilds",AppHome.data("region-builds").toString());
         return Path.of(root).resolve("map-"+size+"-"+h);
     }
 
     /** Builds (or resumes) the whole map region by region on disk and returns the editor overview world. */
-    static TerraForge.World build(TerrainGraph recipe,long seed,int sea,int size,IntConsumer progress,java.util.function.BooleanSupplier cancel)throws Exception{
+    static TerraForge.World build(TerrainGraph recipe,long seed,int sea,int size,IntConsumer progress,java.util.function.BooleanSupplier cancel)throws Exception{return build(recipe,seed,sea,size,progress,cancel,false);}
+    static TerraForge.World build(TerrainGraph recipe,long seed,int sea,int size,IntConsumer progress,java.util.function.BooleanSupplier cancel,boolean explore)throws Exception{
         Path folder=folderFor(recipe,size,seed,sea);Files.createDirectories(folder.getParent());
         synchronized(LargeWorldBuilder.class){
             LargeWorldBuilder.PROGRESS=progress;LargeWorldBuilder.OVERVIEW=true;LargeWorldBuilder.CANCEL=cancel;
-            try{LargeWorldBuilder.exportGraph(folder,recipe,seed,sea,size);}
-            finally{LargeWorldBuilder.PROGRESS=null;LargeWorldBuilder.OVERVIEW=false;LargeWorldBuilder.CANCEL=null;}
+            int previousLimit=LargeWorldBuilder.REGION_LIMIT;LargeWorldBuilder.REGION_LIMIT=explore?9:0;try{LargeWorldBuilder.exportGraph(folder,recipe,seed,sea,size);}
+            finally{LargeWorldBuilder.REGION_LIMIT=previousLimit;LargeWorldBuilder.PROGRESS=null;LargeWorldBuilder.OVERVIEW=false;LargeWorldBuilder.CANCEL=null;}
             var layout=LargeWorldBuilder.LAST_LAYOUT;LargeWorldBuilder.LAST_LAYOUT=null;
             int ceiling=1024;for(var n:recipe.nodes.values())if(n.type==TerrainGraph.Type.CLAMP)ceiling=(int)n.p("max");
             var map=new RegionMap(folder,size,seed,sea,recipe.copy(),layout,ExtendedHeight.forPeak(ceiling));
@@ -70,6 +71,12 @@ final class RegionMap {
         e.water=new float[count];e.snow=new float[count];e.ice=new float[count];e.glacier=new float[count];e.river=new float[count];e.material=new byte[count];e.biome=new byte[count];
         for(int rz=0;rz<regions;rz++)for(int rx=0;rx<regions;rx++){
             Path file=folder.resolve("overview/r."+rx+"."+rz+".bin");
+            if(!Files.exists(file)){
+                for(int z=0;z<cells;z++)for(int x=0;x<cells;x++){
+                    int i=(rz*cells+z)*n+rx*cells+x;w.height[i]=layout.height[i];e.water[i]=EnvironmentMap.at(layout.water,i,sea);e.snow[i]=EnvironmentMap.at(layout.snow,i,0);e.ice[i]=EnvironmentMap.at(layout.ice,i,0);e.glacier[i]=EnvironmentMap.at(layout.glacier,i,0);e.river[i]=EnvironmentMap.at(layout.river,i,0);e.material[i]=layout.material==null?0:layout.material[i];e.biome[i]=layout.biome==null?0:layout.biome[i];
+                }
+                continue;
+            }
             try(var in=new DataInputStream(new BufferedInputStream(new GZIPInputStream(Files.newInputStream(file))))){
                 if(in.readInt()!=cells)throw new IOException("Overview does not match region size: "+file);
                 for(int cz=0;cz<cells;cz++)for(int cx=0;cx<cells;cx++){int i=(rz*cells+cz)*n+rx*cells+cx;
@@ -101,23 +108,36 @@ final class RegionMap {
     }
     static void copy(float[] from,float[] to,int src,int dst,int length,float fallback){if(from==null)Arrays.fill(to,dst,dst+length,fallback);else System.arraycopy(from,src,to,dst,length);}
 
+    private boolean hasFiles(int rx,int rz){return Files.exists(folder.resolve("region/r."+rx+"."+rz+".mca"))&&Files.exists(folder.resolve("overview/r."+rx+"."+rz+".bin"));}
+
     /** Rebuilds one region exactly as the exporter did, using the same shared layout. */
     TerraForge.World tile(int rx,int rz){
         long key=((long)rx<<32)|(rz&0xffffffffL);
-        synchronized(tiles){var cached=tiles.get(key);if(cached!=null)return cached;}
+        synchronized(tiles){var cached=tiles.get(key);if(cached!=null&&hasFiles(rx,rz))return cached;}
         TerraForge.World t;
         synchronized(LargeWorldBuilder.class){
+            synchronized(tiles){var cached=tiles.get(key);if(cached!=null&&hasFiles(rx,rz))return cached;}
             int oldSize=LargeWorldBuilder.SIZE,oldSea=LargeWorldBuilder.SEA;long oldSeed=LargeWorldBuilder.SEED;var oldGraph=LargeWorldBuilder.ACTIVE_GRAPH;
-            try{LargeWorldBuilder.configure(size);LargeWorldBuilder.SEED=seed;LargeWorldBuilder.SEA=sea;LargeWorldBuilder.ACTIVE_GRAPH=graph;t=LargeWorldBuilder.tile(layout,rx,rz,true);}
+            try(var mode=FastGpu.scope(fastAlgorithms);var generation=new GpuGeneration.ModeScope(generationMode);var compression=new RegionBatchWriter.LevelScope(encodingLevel)){LargeWorldBuilder.configure(size);LargeWorldBuilder.SEED=seed;LargeWorldBuilder.SEA=sea;LargeWorldBuilder.ACTIVE_GRAPH=graph;t=LargeWorldBuilder.tile(layout,rx,rz,true);Path output=folder.resolve("region/r."+rx+"."+rz+".mca");try{if(!Files.exists(output))LargeWorldBuilder.region(t,output,rx,rz);Path view=folder.resolve("overview/r."+rx+"."+rz+".bin");if(!Files.exists(view))writeOverview(t,view);}catch(IOException error){throw new UncheckedIOException(error);}}
             finally{LargeWorldBuilder.configure(oldSize);LargeWorldBuilder.SEED=oldSeed;LargeWorldBuilder.SEA=oldSea;LargeWorldBuilder.ACTIVE_GRAPH=oldGraph;}
+            synchronized(tiles){tiles.put(key,t);}
         }
-        synchronized(tiles){tiles.put(key,t);}
         return t;
+    }
+
+    /** Lock one region at a time, so open block views can keep requesting nearby areas. */
+    void finish()throws Exception{
+        int side=size/512;for(int index:RegionOrder.near(side,side/2,side/2)){
+            if(Thread.currentThread().isInterrupted())throw new java.util.concurrent.CancellationException();int rx=index%side,rz=index/side;
+            if(!Files.exists(folder.resolve("region/r."+rx+"."+rz+".mca"))||!Files.exists(folder.resolve("overview/r."+rx+"."+rz+".bin")))tile(rx,rz);
+        }
+        Files.writeString(folder.resolve("completion.txt"),"Full region pass completed.\n");
     }
 
     /** Copies the built world folder (without the editor overview) into a Minecraft saves folder. */
     void copyWorld(Path target)throws IOException{
         if(Files.exists(target))throw new IOException("That world already exists: "+target);
+        try{finish();}catch(java.util.concurrent.CancellationException cancelled){throw cancelled;}catch(IOException e){throw e;}catch(Exception e){throw new IOException("Could not finish the map",e);}
         try(var walk=Files.walk(folder)){
             for(Path p:(Iterable<Path>)walk::iterator){
                 Path rel=folder.relativize(p);if(rel.toString().startsWith("overview")||p.getFileName().toString().endsWith(".tmp"))continue;

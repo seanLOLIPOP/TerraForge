@@ -1,6 +1,6 @@
 import java.util.function.BooleanSupplier;
 final class GpuWaterShapes {
- static boolean eligible(int n){return GpuGeneration.enabled()&&System.getProperty("terraforge.gpu","auto").equalsIgnoreCase("gpu")&&n>=512&&n*(long)n*100<=(256L<<20);}
+ static boolean eligible(int n){return GpuGeneration.enabled()&&GpuGeneration.mode().equalsIgnoreCase("gpu")&&n>=512&&n*(long)n*100<=(256L<<20);}
  static boolean lake(TerrainGraph.Node node,EnvironmentMap base,EnvironmentMap result,float[] distance,int n,int size,int sea,long seed,double cx,double cz,double radius,BooleanSupplier stop){
   if(!eligible(n))return false;int count=n*n;var copy=node.copy();copy.values.put("centerX",cx);copy.values.put("centerZ",cz);copy.values.put("cellRadius",radius);copy.values.put("nodeId",(double)node.id);
   float[] material=new float[count];for(int i=0;i<count;i++)material[i]=result.material[i];float[] out=new float[count*4];

@@ -11,7 +11,7 @@ try {
     New-Item -ItemType Directory -Path "$classes/assets" -Force | Out-Null
     Copy-Item -LiteralPath 'assets/tree-library.trees' -Destination "$classes/assets/"
     $sources = @(Get-ChildItem -LiteralPath src -Filter '*.java' | ForEach-Object FullName)
-    & "$JdkHome/bin/javac.exe" --release 21 -encoding UTF-8 -cp 'lib/*' -d $classes @sources
+    & "$JdkHome/bin/javac.exe" --release 21 --add-modules jdk.incubator.vector -encoding UTF-8 -cp 'lib/*' -d $classes @sources
     if ($LASTEXITCODE) { throw 'Compilation failed.' }
     & "$JdkHome/bin/jar.exe" --create --file TerraForge.jar.new --manifest tools/manifest.mf -C $classes .
     if ($LASTEXITCODE) { throw 'JAR creation failed.' }

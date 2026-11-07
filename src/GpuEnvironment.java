@@ -3,7 +3,7 @@ import java.util.function.BooleanSupplier;
 /** Expensive independent environmental passes. Routing and neighborhood preparation remain shared CPU work. */
 final class GpuEnvironment {
     static EnvironmentMap simple(TerrainGraph.Node node,EnvironmentMap base,EnvironmentMap climate,int n,int size,int sea,long seed,BooleanSupplier stop){
-        if(!System.getProperty("terraforge.gpu","auto").equalsIgnoreCase("gpu")||n*(long)n*64>(256L<<20))return null;
+        if(!GpuGeneration.mode().equalsIgnoreCase("gpu")||n*(long)n*64>(256L<<20))return null;
         int outputs=switch(node.type){case FREEZE,BIOMES->1;case SNOW->node.p("natural")>.5?0:1;case GLACIER->4;case RAPIDS->3;default->0;};if(outputs==0)return null;
         int count=n*n;float[] data=new float[count*9];
         for(int i=0;i<count;i++){

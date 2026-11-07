@@ -5,3 +5,4 @@
 *.tmp
 *.log
 /large-map-built.png
+/encoded-regions/

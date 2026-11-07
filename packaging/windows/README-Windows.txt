@@ -1,4 +1,4 @@
-TerraForge 0.1.16 - Windows x64 portable edition
+TerraForge 0.1.17 - Windows x64 portable edition
 
 Extract the entire ZIP to a writable folder, then open TerraForge.exe.
 Java 21 is included. No Java installation or administrator access is required.
@@ -59,7 +59,31 @@ Connected terrain stages stay on the GPU and compatible node passes are combined
 during builds. Use Generation: Auto for the recommended balance.
 CPU-only stages and saving still use the CPU. First use compiles GPU programs.
 
-Version 0.1.16 adds shared CPU optimizations for all maps: column rock-noise reuse,
+Version 0.1.17 adds shared CPU optimizations for all maps: column rock-noise reuse,
 plain underground/empty sky shortcuts, tree water-distance reuse, and faster river
 routing. Single-region builds can use multiple terrain workers when RAM limits
 region concurrency. These improvements are automatic; gains vary by map.
+
+NEW OPTIMIZATION CONTROLS
+Nodes > Explore first builds nine regions near spawn, then opens the map.
+Whole Map Blocks and Minecraft block windows generate and save requested regions.
+Finish whole map completes missing regions. Export also finishes the map first.
+Missing overview areas show the coarse global layout until they are generated.
+
+Fast GPU algorithms enables parallel heightfield erosion, approximate Euclidean
+water-distance fields, and batched rock-layer calculations where supported.
+These algorithms can change terrain and tree placement. The default is off.
+Use Generation: Auto or GPU; unsupported devices and sizes use CPU fallbacks.
+
+CPU SIMD enables optional vectorized source noise. It was slower than scalar CPU
+noise on the test machine, so it is off by default. GPU source noise is separate.
+Compression: fast uses level 1 (default), none uses more disk, compact uses level 3.
+
+Graph-stage caches are bounded in memory and last for the app session. Encoded
+regions use a bounded 1 GiB cache in encoded-regions beside the app. Graph edits
+reuse upstream stages and identical region output; changed regions are encoded.
+Checked references to original region files also allow reuse after cache eviction.
+Region tiles still need generation to check whether their contents changed.
+Initial global terrain and river preparation is still required for a new map.
+Live previews now refine from coarse to detailed scaled terrain, up to 512 square;
+scaled previews omit individual trees. Builds retain full chosen map resolution.

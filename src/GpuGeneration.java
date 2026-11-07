@@ -15,13 +15,17 @@ final class GpuGeneration {
     private static final java.util.concurrent.atomic.AtomicLong RESIDENT_BYTES=new java.util.concurrent.atomic.AtomicLong();
     private static final ThreadLocal<Session> SESSION=new ThreadLocal<>();
     private static final ThreadLocal<Boolean> CPU_ONLY=ThreadLocal.withInitial(()->false);
+    private static final ThreadLocal<String> MODE=new ThreadLocal<>();
+    static String mode(){return MODE.get()!=null?MODE.get():System.getProperty("terraforge.gpu","auto");}
+    static final class ModeScope implements AutoCloseable {final String previous=MODE.get();ModeScope(String value){MODE.set(value);}public void close(){if(previous==null)MODE.remove();else MODE.set(previous);}}
     private static volatile String status="GPU not initialized";
     static String status(){return status;}
     static long jobs(){return JOBS.get();}
     static long uploadedBytes(){return UPLOADS.get();}static long downloadedBytes(){return DOWNLOADS.get();}static long fusedNodes(){return FUSED.get();}
     static long residentBytes(){return RESIDENT_BYTES.get();}
     static void recordFused(int count){FUSED.addAndGet(count);}
-    static boolean enabled(){return !CPU_ONLY.get()&&!System.getProperty("terraforge.gpu","auto").equalsIgnoreCase("cpu");}
+    static boolean enabled(){return !CPU_ONLY.get()&&!mode().equalsIgnoreCase("cpu");}
+    static boolean retainingFields(){Session s=SESSION.get();return s!=null&&s.retainFields;}
     static boolean deferring(){Session s=SESSION.get();return s!=null&&s.deferred;}
     static boolean fusing(){Session s=SESSION.get();return s!=null&&!s.retainFields&&s.active&&enabled()&&(!attempted||backend!=null);}
     static Session begin(int n,boolean retainFields,BooleanSupplier stop){return new Session(n,retainFields,stop);}
@@ -94,6 +98,12 @@ final class GpuGeneration {
         try{Backend b=backend();if(b==null||height.length*13L+b.liveBytes>b.budget)return false;b.thermal(height,n,iterations,stop);JOBS.incrementAndGet();return true;}
         catch(CancellationException cancelled){throw cancelled;}
         catch(LinkageError|RuntimeException error){failed(error);return false;}
+    }
+    /** Ping-pong passes stay on-device; only the final field is downloaded. */
+    static synchronized float[] iterate(String key,String body,double[] params,float[] initial,float[] original,int n,int size,int sea,long seed,int passes,boolean descendingStep,BooleanSupplier stop){
+        if(!enabled()||n<512||initial.length*16L>(256L<<20))return null;
+        try{Backend b=backend();if(b==null||initial.length*16L+b.liveBytes>b.budget)return null;float[] result=b.iterate(key,body,params,initial,original,n,size,sea,seed,passes,descendingStep,stop);JOBS.addAndGet(passes);return result;}
+        catch(CancellationException cancelled){throw cancelled;}catch(RetryCpu retry){throw retry;}catch(LinkageError|RuntimeException failure){failed(failure);return null;}
     }
     static void checkStop(BooleanSupplier stop){if(Thread.currentThread().isInterrupted()||stop.getAsBoolean())throw new CancellationException();}
     static synchronized boolean generate(TerrainGraph.Node node,int n,int sea,long seed,float[] output,BooleanSupplier stop){
@@ -232,6 +242,19 @@ final class GpuGeneration {
                     ok(clEnqueueNDRangeKernel(queue,k,1,null,stack.pointers(count),null,null,null));host.clear().limit(count);ok(clEnqueueReadBuffer(queue,buffers[0],true,0,host,null,null));checkStop(stop);host.get(output,offset,count);DOWNLOADS.addAndGet(count*4L);
                 }}finally{MemoryUtil.memFree(host);}
             }finally{clFinish(queue);var released=new java.util.HashSet<Long>();for(long buffer:buffers)if(buffer!=0&&released.add(buffer))clReleaseMemObject(buffer);}
+        }
+        float[] iterate(String key,String body,double[] params,float[] initial,float[] original,int n,int size,int sea,long seed,int passes,boolean descendingStep,BooleanSupplier stop){
+            long k=compile(key,mappingSource(key,body,false),"mapNode");long[] buffers=new long[4];
+            try(MemoryStack stack=MemoryStack.stackPush()){
+                buffers[0]=upload(initial);buffers[1]=upload(new float[initial.length]);buffers[2]=upload(original);IntBuffer error=stack.mallocInt(1);buffers[3]=clCreateBuffer(context,CL_MEM_READ_ONLY,Math.max(8,params.length*8L),error);ok(error.get(0));
+                for(int pass=0;pass<passes;pass++){checkStop(stop);if(descendingStep)params[0]=Math.max(1,n>>(pass+1));
+                    ok(clEnqueueWriteBuffer(queue,buffers[3],true,0,params,null,null));
+                    ok(clSetKernelArg1p(k,0,buffers[1]));ok(clSetKernelArg1p(k,1,buffers[0]));ok(clSetKernelArg1p(k,2,buffers[2]));ok(clSetKernelArg1p(k,3,buffers[2]));ok(clSetKernelArg1p(k,4,buffers[3]));
+                    ok(clSetKernelArg1i(k,5,n));ok(clSetKernelArg1i(k,6,size));ok(clSetKernelArg1i(k,7,sea));ok(clSetKernelArg1l(k,8,seed));ok(clSetKernelArg1i(k,9,0));ok(clSetKernelArg1i(k,10,initial.length));
+                    ok(clEnqueueNDRangeKernel(queue,k,1,null,stack.pointers(initial.length),null,null,null));long swap=buffers[0];buffers[0]=buffers[1];buffers[1]=swap;
+                }
+                checkStop(stop);float[] output=new float[initial.length];ok(clEnqueueReadBuffer(queue,buffers[0],true,0,output,null,null));DOWNLOADS.addAndGet(output.length*4L);checkStop(stop);return output;
+            }finally{clFinish(queue);for(long buffer:buffers)if(buffer!=0)clReleaseMemObject(buffer);}
         }
         void thermal(float[] height,int n,int iterations,BooleanSupplier stop){
             long first=compile("thermalFlow",THERMAL,"thermalFlow"),second=compile("thermalGather",THERMAL,"thermalGather");long[] buffers=new long[3];
