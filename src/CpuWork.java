@@ -8,8 +8,11 @@ final class CpuWork {
     private static int parallelism(){int maximum=Math.max(1,Runtime.getRuntime().availableProcessors()-1);return Math.max(1,Math.min(maximum,Integer.getInteger("terraforge.cpuThreads",maximum)));}
     private static final ForkJoinPool POOL=new ForkJoinPool(parallelism(),
         pool->{var thread=ForkJoinPool.defaultForkJoinWorkerThreadFactory.newThread(pool);thread.setName("TerraForge-CPU-"+IDS.incrementAndGet());return thread;},null,false);
+    private static final ForkJoinPool ENCODERS=new ForkJoinPool(Math.max(1,Math.min(Math.min(16,parallelism()),Integer.getInteger("terraforge.chunkThreads",8))),
+        pool->{var thread=ForkJoinPool.defaultForkJoinWorkerThreadFactory.newThread(pool);thread.setName("TerraForge-chunks-"+IDS.incrementAndGet());return thread;},null,false);
     private static final ThreadLocal<Boolean> SERIAL_ROWS=ThreadLocal.withInitial(()->false);
     static int threads(){return POOL.getParallelism();}
+    static int batchThreads(){return ENCODERS.getParallelism();}
     interface RegionJob {void run()throws Exception;}
     interface RegionConsumer {void accept(int index)throws Exception;}
     /** Region workers already run independent maps in parallel: do not multiply their thread counts. */
@@ -29,12 +32,17 @@ final class CpuWork {
         }
     }
     static void rows(int rows,int width,BooleanSupplier stop,IntConsumer body){
-        Thread owner=Thread.currentThread();int threads=threads();
-        if(rows*(long)width<262144||threads==1||SERIAL_ROWS.get()){
+        rows(rows,width,stop,body,false);
+    }
+    /** Bounded chunk batches share the CPU pool even inside a memory-limited region job. */
+    static void batch(int count,BooleanSupplier stop,IntConsumer body){rows(count,1,stop,body,true);}
+    private static void rows(int rows,int width,BooleanSupplier stop,IntConsumer body,boolean batch){
+        Thread owner=Thread.currentThread();var pool=batch?ENCODERS:POOL;int threads=pool.getParallelism();
+        if(threads==1||!batch&&(rows*(long)width<262144||SERIAL_ROWS.get())){
             for(int row=0;row<rows;row++){if(owner.isInterrupted()||stop.getAsBoolean())throw new CancellationException();body.accept(row);}return;
         }
         AtomicBoolean interrupted=new AtomicBoolean();AtomicReference<Throwable> failure=new AtomicReference<>();
-        int grain=Math.max(8,(rows+threads*2-1)/(threads*2));
+        int grain=batch?1:Math.max(8,(rows+threads*2-1)/(threads*2));
         class Task extends RecursiveAction {
             final int first,last;
             Task(int first,int last){this.first=first;this.last=last;}
@@ -48,7 +56,7 @@ final class CpuWork {
                 }}catch(Throwable error){failure.compareAndSet(null,error);}
             }
         }
-        var task=POOL.submit(new Task(0,rows));
+        var task=pool.submit(new Task(0,rows));
         try{task.get();}
         catch(InterruptedException error){interrupted.set(true);task.join();Thread.currentThread().interrupt();throw new CancellationException();}
         catch(ExecutionException error){throw new IllegalStateException("CPU generation failed",error.getCause());}

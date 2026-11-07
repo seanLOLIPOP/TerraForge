@@ -1,12 +1,12 @@
-# TerraForge v0.1.11
+# TerraForge v0.1.12
 
 Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for Linux, macOS, and Windows.
 
 ## Windows portable edition
 
-[Download Windows v0.1.11](https://github.com/seanLOLIPOP/TerraForge/releases/download/v0.1.11/TerraForge-v0.1.11-Windows-x64.zip)
+[Published Windows releases](https://github.com/seanLOLIPOP/TerraForge/releases)
 
-Extract `TerraForge-v0.1.11-Windows-x64.zip` completely and open `TerraForge.exe`.
+Extract `TerraForge-v0.1.12-Windows-x64.zip` completely and open `TerraForge.exe`.
 The Windows x64 package includes Java 21 and Windows LWJGL natives. No Java install
 or administrator rights are needed. GPU views require OpenGL 3.3 graphics drivers.
 Minecraft saves default to `%APPDATA%\.minecraft\saves`. Run
@@ -39,6 +39,13 @@ first build slower than later builds. Seeds and generated channel values are
 preserved. Advanced launch flags `-Dterraforge.cpuThreads=N` and
 `-Dterraforge.regionThreads=N` can lower concurrency; region overrides still obey
 CPU and memory limits.
+
+For disk-backed builds, Nodes now has a **Region batch** control. Keep **Auto**
+for CPU/RAM-based concurrency, or choose 2, 4, 8, or 16 regions as an upper bound.
+Workers refill available slots as regions finish. Each region encodes 64 chunks
+per batch on a shared encoder pool (8 workers by default), then writes the
+compressed data sequentially through a buffer. Chunk order and region contents
+are preserved. Partial files are removed if a batch fails or is cancelled.
 
 ## Download and run
 

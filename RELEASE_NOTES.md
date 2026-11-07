@@ -1,3 +1,17 @@
+# TerraForge v0.1.12 — Batched region encoding and buffered writes
+
+- Nodes adds Region batch: Auto, 2, 4, 8, or 16 concurrent regions. Manual choices
+  remain upper bounds within the existing CPU and memory limits.
+- Regions encode 64 chunks per batch using a shared encoder pool, then commit
+  payload data sequentially with a 1 MiB output buffer and one final header write.
+- The default encoder pool is capped at eight threads to balance generation,
+  allocation, and compression work. Advanced `terraforge.chunkThreads` overrides
+  are capped at 16 and the CPU-thread limit.
+- Shared sea-distance and slope fields are prepared before region jobs start.
+- Status reports completed regions and the effective concurrent-region limit.
+- Region files retain their chunk order, compression, and contents. Failed or
+  cancelled batches drain their workers and remove incomplete temporary files.
+
 # TerraForge v0.1.11 — Multicore map generation
 
 - Nodes → Build into map uses a shared CPU pool for independent rows in noise,

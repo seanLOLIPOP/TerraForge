@@ -1,4 +1,4 @@
-TerraForge 0.1.11 - Windows x64 portable edition
+TerraForge 0.1.12 - Windows x64 portable edition
 
 Extract the entire ZIP to a writable folder, then open TerraForge.exe.
 Java 21 is included. No Java installation or administrator access is required.
@@ -16,6 +16,13 @@ climate, material, and snow calculations. On a 32-thread CPU it can use up to
 heap, and available system RAM. Small previews and ordered river/hydraulic
 operations can still use fewer cores. The first build includes Java warm-up;
 later builds generally run faster. No CPU setting is required.
+
+For large disk-backed builds, choose Nodes > Region batch > Auto (recommended).
+You can also request 2, 4, 8, or 16 regions at once; CPU/RAM limits still apply.
+Each region encodes 64-chunk batches using a shared pool, then writes buffered
+data in order. Available region slots refill as soon as another region finishes.
+The batch selector is enabled only for region builds. The status line shows the
+effective region batch limit.
 
 Whole Map Blocks retains detailed tiles while you move. The default textured
 target spans 1,024 blocks across; + and - adjust it up to 1,536 blocks across.
