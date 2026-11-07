@@ -1,3 +1,13 @@
+# TerraForge v0.1.24 - Converging river tributaries
+
+- Replace downstream recursive split/rejoin webs with upstream-grown tributary trees.
+- Tributaries feed into the main channel, with smaller widths toward headwaters.
+- Unequal branch lengths, flow shares and angles replace repeated symmetric forks.
+- Stop upstream growth before another channel, preventing triangular drainage loops.
+- Preserve terrain checks, seasonal headwaters, lake endings and local island splits.
+- Optional left-half density control adds tributaries on the west side of a map.
+- Start a fresh region build to regenerate existing river geometry.
+
 # TerraForge v0.1.23 - Show river forks in the whole-map layout
 
 - Fix missing fork channels in coarse layouts and unexplored whole-map areas.
