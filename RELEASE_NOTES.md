@@ -1,3 +1,13 @@
+# TerraForge v0.1.18 - Natural shorelines
+
+- Opt-in slope-based variable beaches, sand/gravel/rock choices, and shallow
+  underwater shelves in Coast / beach.
+- Fixed water levels and river masks are preserved. Regional builds use the
+  shared global shoreline profile. Existing graphs keep the legacy behavior.
+- Organic surface materials can enable matching natural beach classification.
+  This optional classifier currently uses parallel CPU workers.
+- See docs/NATURAL-SHORELINES.md for controls and limitations.
+
 # TerraForge v0.1.14 — Faster GPU graph builds
 
 - Compatible connected terrain nodes keep their intermediate maps on the GPU,

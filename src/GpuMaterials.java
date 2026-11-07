@@ -3,6 +3,7 @@ import java.util.function.BooleanSupplier;
 final class GpuMaterials {
  static String helpers(){String code=HELPERS;int i=0;for(var param:TerrainGraph.Type.ORGANIC_MATERIALS.params)code=code.replace("P("+param.key()+")","settings["+(i++)+"]");return code;}
  static boolean apply(TerrainGraph.Node node,EnvironmentMap base,EnvironmentMap result,int n,int size,int sea,long seed,int ox,int oz,int step,int g,double spacing,float[] patch,float[] detail,float[] wet,float[] levels,float[] forest,BooleanSupplier stop){
+  if(node.p("naturalShore")>.5)return false;
   if(!GpuGeneration.enabled()||n<512||n*(long)n*48>(256L<<20))return false;
   int count=n*n;float[] grids=new float[g*g*5];int offset=0;for(float[] field:new float[][]{patch,detail,wet,levels,forest}){System.arraycopy(field,0,grids,offset,field.length);offset+=field.length;}
   float[] channels=new float[count*7];
@@ -78,6 +79,7 @@ int count=n*n,g=(int)P(grid);double step=P(step),spacing=P(spacing),block=size/(
     if(mat==1&&cover>P(forestFloor)*(.55+p)&&slope<.65)mat=rain>.72&&d>.62?16:d<.28?15:p<.6?14:10;
    }
    double resultSnow=C[count+i];
-   double snow=C[count+i];if(snow>0){double retention=1-curve(fclamp((slope-.45)/1.2,0,1));double organic=fclamp(snow+(p-.5)*.55+(d-.5)*.12,0,1);resultSnow=underwater?0:(float)(organic*retention);}value=CHANNEL==0?mat:resultSnow;
+   double snow=C[count+i];if(snow>0){double retention=1-curve(fclamp((slope-.45)/1.2,0,1));double organic=fclamp(snow+(p-.5)*.55+(d-.5)*.12,0,1);resultSnow=underwater?0:(float)(organic*retention);}
+value=CHANNEL==0?mat:resultSnow;
  """;
 }

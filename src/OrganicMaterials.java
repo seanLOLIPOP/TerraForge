@@ -22,10 +22,11 @@ final class OrganicMaterials {
    else if(underwater){mat=river?(p<.28&&h<sea+55?2:d<.24?3:d>.76?12:7):(slope>.6?3:p<.63?2:7);}
    else if(rg>.09&&distance<5){mat=fl<.45?3:fl<.75?13:12;}/* spray-washed rock beside waterfalls */
    else if(distance<node.p("bankWidth")*(.55+p)&&h-mix(levels,g,gx,gz)<8&&river){double t=distance/Math.max(1,node.p("bankWidth")*(.55+p));mat=t<.25?(d<.2&&h<sea+45?2:d>.82?12:7):t<.65?(p<.37&&rain>.6?5:d<.6?10:7):d<.5?10:1;}
-   else if(!river&&beachSand(node,p,d,ox+x*block,oz+z*block,seed,base.shoreDistance==null?distance:base.shoreDistance[i],h,sea)){mat=slope>.6||p>.8?(d>.65?12:7):2;}
+   else if(!river&&beachSand(node,p,d,ox+x*block,oz+z*block,seed,base.shoreDistance==null?distance:base.shoreDistance[i],h,sea)){mat=node.p("naturalShore")>.5?(slope>.8?3:slope>.28?7:2):slope>.6||p>.8?(d>.65?12:7):2;}
    else {mat=mountainSurface(mountainMaterial(exposure,p,d,ox+x*block,oz+z*block,seed,node.p("blendWidth")/110.),p,d,ox+x*block,oz+z*block,seed,h,slope,node.p("rockLine"));
     if(mat==1&&cover>node.p("forestFloor")*(.55+p)&&slope<.65)mat=rain>.72&&d>.62?16:d<.28?15:p<.6?14:10;
    }
+   if(node.p("naturalShore")>.5&&!river&&base.material!=null&&(underwater||beachSand(node,p,d,ox+x*block,oz+z*block,seed,base.shoreDistance==null?distance:base.shoreDistance[i],h,sea))&&(base.material[i]==2||base.material[i]==3||base.material[i]==7))mat=base.material[i];
    e.material[i]=(byte)mat;
    double snow=EnvironmentMap.at(base.snow,i,0);if(snow>0){double retention=1-TerraForge.smooth(EnvironmentNodes.clamp((slope-.45)/1.2,0,1));double organic=EnvironmentNodes.clamp(snow+(p-.5)*.55+(d-.5)*.12,0,1);e.snow[i]=underwater?0:(float)(organic*retention);}
   }});
@@ -40,6 +41,7 @@ final class OrganicMaterials {
         double cove=TerraForge.smooth(EnvironmentNodes.clamp(.72*TerraForge.sample(wx/520,wz/520,seed+2311)+.28*TerraForge.sample(wx/150,wz/150,seed+2313),0,1));
         double width=base*(.55+p)*(1-variation+variation*(.2+1.6*cove));
         double rise=node.p("beachRise")*(.65+p)*Math.sqrt(Math.max(1,base/48));
+        if(node.p("naturalShore")>.5){double grade=Math.max(0,h-sea)/Math.max(1,distance);width*=EnvironmentNodes.clamp(1.35-grade*1.5,.15,1.35);}
         if(distance<width)return h<sea+rise;
         if(dunes<=0)return false;
         double zone=width*(.35+.65*dunes),t=(distance-width)/Math.max(1,zone);

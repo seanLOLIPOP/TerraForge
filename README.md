@@ -1,6 +1,10 @@
-# TerraForge v0.1.17
+# TerraForge v0.1.18
 
 Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for Linux, macOS, and Windows.
+
+v0.1.18 adds opt-in natural shorelines: slope-based beach widths, sand/gravel/rock
+shore choices, and shallow underwater shelves. Enable Natural shoreline in the
+Coast / beach node; see [shoreline controls](docs/NATURAL-SHORELINES.md).
 
 v0.1.17 adds bounded graph-stage and encoded-region caches, sparse tree overlays,
 spatial tree collision checks, serialized section reuse, reusable encoder buffers,
@@ -13,7 +17,7 @@ for measurements, behavior, and limitations.
 
 [Published Windows releases](https://github.com/seanLOLIPOP/TerraForge/releases)
 
-Extract `TerraForge-v0.1.17-Windows-x64.zip` completely and open `TerraForge.exe`.
+Extract `TerraForge-v0.1.18-Windows-x64.zip` completely and open `TerraForge.exe`.
 The Windows x64 package includes Java 21 and Windows LWJGL natives. No Java install
 or administrator rights are needed. GPU views require OpenGL 3.3 graphics drivers.
 Minecraft saves default to `%APPDATA%\.minecraft\saves`. Run
