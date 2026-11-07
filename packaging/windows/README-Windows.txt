@@ -1,4 +1,4 @@
-TerraForge 0.1.12 - Windows x64 portable edition
+TerraForge 0.1.13 - Windows x64 portable edition
 
 Extract the entire ZIP to a writable folder, then open TerraForge.exe.
 Java 21 is included. No Java installation or administrator access is required.
@@ -49,3 +49,8 @@ Use a Windows x64 Java 21 JDK (Eclipse Temurin recommended). In PowerShell:
   .\build.ps1 -JdkHome 'C:\path\to\jdk-21'
   .\packaging\windows\package.ps1 -JdkHome 'C:\path\to\jdk-21'
 The package is written to dist and includes a SHA-256 checksum.
+
+GPU generation: Nodes > Generation > Auto (recommended), GPU, or CPU.
+GPU info shows the selected backend. GPU acceleration requires an OpenCL 1.2
+driver with double precision; unsupported devices automatically use the CPU.
+No CUDA toolkit is required. First use includes shader compilation.

@@ -5,6 +5,7 @@ final class ThermalErosion {
     }
     static void apply(TerraForge.World world,int iterations,java.util.function.BooleanSupplier stop){
         if(iterations<=0)return;
+        if(GpuGeneration.thermal(world.height,world.size,iterations,stop))return;
         int n=world.size;float[] height=world.height,amount=new float[n*n];byte[] flow=new byte[n*n];
         for(int pass=0;pass<iterations;pass++){
             CpuWork.rows(n,n,stop,z->{

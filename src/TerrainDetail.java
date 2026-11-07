@@ -1,6 +1,7 @@
 import java.util.function.BooleanSupplier;
 final class TerrainDetail {
  static EnvironmentMap apply(TerrainGraph.Node node,EnvironmentMap base,int n,int size,int sea,long seed,double originX,double originZ,BooleanSupplier stop){
+  EnvironmentMap accelerated=GpuEnvironment.detail(node,base,n,size,sea,seed,originX,originZ,stop);if(accelerated!=null)return accelerated;
   var result=base.share(base.height.clone());
   CpuWork.rows(n,n,stop,z->{for(int x=0;x<n;x++){int i=z*n+x;double h=base.height[i],water=base.waterY(i,sea);if(h<=water+1||h>=510)continue;
    double shore=TerraForge.smooth(Math.min(1,Math.max(0,(h-water-1)/10))),summit=TerraForge.smooth(Math.min(1,(510-h)/16));double xx=originX+x*(double)size/n,zz=originZ+z*(double)size/n;long detailSeed=seed+(long)node.p("seed");double scale=node.p("scale");

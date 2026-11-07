@@ -12,7 +12,7 @@ import java.util.zip.*;
 /** Standalone terrain painter and Minecraft Java 1.20.4 exporter. */
 public class TerraForge extends JFrame {
     private static final long serialVersionUID=2L;
-    static final String VERSION="0.1.12";
+    static final String VERSION="0.1.13";
     static class World {
         int size,sea,buildHeight=384,exportSpawnX=-1,exportSpawnY=-1,exportSpawnZ=-1; long seed; float[] height; byte[] material;EnvironmentMap environment;int[] treeHeights;
         TerrainGraph graph;TerrainGenerator.Settings settings=TerrainGenerator.Settings.legacy();

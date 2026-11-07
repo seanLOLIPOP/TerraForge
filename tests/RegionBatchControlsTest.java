@@ -16,6 +16,9 @@ public class RegionBatchControlsTest {
             check(ready,"editor generation ready");
             SwingUtilities.invokeAndWait(()->{
                 var app=frame[0];app.openNodes();var editor=app.graphEditor;
+                editor.generationBackend.setSelectedItem("GPU");check("gpu".equals(System.getProperty("terraforge.gpu")),"GPU mode applies");
+                editor.generationBackend.setSelectedItem("CPU");check("cpu".equals(System.getProperty("terraforge.gpu")),"CPU mode applies");
+                editor.generationBackend.setSelectedItem("Auto");check("auto".equals(System.getProperty("terraforge.gpu")),"Auto mode applies");
                 editor.previewTouched=true;editor.previewFull.setSelected(false);editor.regionTouched=true;editor.regionMode.setSelected(true);
                 editor.mapSize.setSelectedItem("2048");editor.updateBuildMode();
                 check(editor.regionBatch.isEnabled(),"batch control enabled for disk-backed builds");

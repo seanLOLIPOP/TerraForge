@@ -1,3 +1,26 @@
+# TerraForge v0.1.13 — Vendor-neutral GPU terrain generation
+
+- Nodes adds Generation: Auto, GPU, and CPU, plus GPU info. Auto is recommended:
+  it accelerates expensive supported stages while leaving cheap operations on CPU.
+- OpenCL 1.2 GPU paths cover noise, ridges, island shaping, all mountain profiles,
+  regional relief, standard Generate presets, thermal erosion, ocean shaping,
+  climate, terrain detail, organic materials, mountain zones, and natural snow.
+- GPU mode additionally includes constant/remap/clamp/terrace/blend/mask nodes,
+  lake basin shaping, coast/wetland/sediment surface passes, legacy snow,
+  glacier/freeze/rapids, and biome classification.
+- Ordered routing, hydraulic erosion, neighborhood preparation, object placement,
+  Minecraft region encoding, and disk writes continue to use the CPU.
+- Compatible NVIDIA, AMD, and Intel OpenCL drivers are supported. Double precision
+  is required; missing runtimes, unsupported devices, oversized jobs, or GPU errors
+  fall back to CPU. Small maps stay on CPU. Intel hardware is not yet tested.
+- A single serialized GPU queue avoids competing region-worker contexts. GPU jobs
+  use bounded staging/output batches and at most 256 MiB of working buffers,
+  further limited to one quarter of the selected device's reported memory.
+- GPU calculations may differ slightly from CPU floating-point results. Select
+  CPU when exact reproduction of the CPU implementation is required.
+- The Windows package includes the OpenCL Java bindings; the GPU driver supplies
+  the OpenCL runtime. No CUDA toolkit or vendor-specific app package is needed.
+
 # TerraForge v0.1.12 — Batched region encoding and buffered writes
 
 - Nodes adds Region batch: Auto, 2, 4, 8, or 16 concurrent regions. Manual choices

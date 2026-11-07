@@ -90,7 +90,7 @@ final class MountainZones {
             }});
             talus=next;
         }
-        final float[] bowlField=bowl,talusField=talus;CpuWork.rows(n,n,stop,z->{
+        final float[] bowlField=bowl,talusField=talus;if(!GpuZones.apply(node,base,e,n,size,sea,seed,ox,oz,slope,north,bowl,talus,stop))CpuWork.rows(n,n,stop,z->{
 
             for(int x=0;x<n;x++){
                 int i=z*n+x;double h=base.height[i];

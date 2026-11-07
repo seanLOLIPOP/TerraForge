@@ -4,6 +4,11 @@ class RegionExportSizeTest{
  public static void main(String[] a)throws Exception{
   Path dir=Files.createTempDirectory("tf-region-size"),dest=dir.resolve("World2048");
   var graph=TerrainGraph.template("Island mountains");
+  if(a.length>0&&a[0].equals("gpu-surfaces")){
+   int previous=graph.nodes.get(graph.output()).input[0];
+   for(var type:new TerrainGraph.Type[]{TerrainGraph.Type.TERRAIN_DETAIL,TerrainGraph.Type.ORGANIC_MATERIALS,TerrainGraph.Type.SNOW}){var node=graph.add(type,0,0);graph.connect(previous,node.id,0);previous=node.id;}
+   graph.connect(previous,graph.output(),0);
+  }
   LargeWorldBuilder.exportGraph(dest,graph,4242,62,2048);
   long files;try(var s=Files.list(dest.resolve("region"))){files=s.filter(p->p.toString().endsWith(".mca")).count();}
   check(files==16,"2048 map is 4 x 4 regions: "+files);
@@ -19,6 +24,7 @@ class RegionExportSizeTest{
   check(java.util.Arrays.equals(before,Files.readAllBytes(keep))&&Files.getLastModifiedTime(keep).toMillis()==stamp,"finished regions are not rewritten on resume");
   boolean rejected=false;try{LargeWorldBuilder.configure(5000);}catch(IllegalArgumentException e){rejected=true;}
   check(rejected,"sizes must be multiples of 512");
+  if(a.length>0&&a[0].equals("gpu-surfaces"))check(GpuGeneration.jobs()>0,"real exported regions used GPU surface passes");
   System.out.println("PASS: region export at a chosen size (2048 = 16 regions), settings recorded, default restored, resume rebuilds only missing regions");
  }
 }

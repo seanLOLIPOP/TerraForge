@@ -12,6 +12,7 @@ final class NaturalSnow {
   return layers/8f;
  }
  static EnvironmentMap apply(TerrainGraph.Node node,EnvironmentMap base,EnvironmentMap climate,int n,int size,int sea,long seed,int ox,int oz,BooleanSupplier stop){
+  EnvironmentMap accelerated=GpuEnvironment.snow(node,base,climate,n,size,sea,seed,ox,oz,stop);if(accelerated!=null)return accelerated;
   var e=base.share(base.height);e.snow=new float[n*n];double block=size/(double)n;boolean zones=base.zoneSlope!=null&&base.zoneSlope.length==n*n&&base.zoneSource==base.height;
   CpuWork.rows(n,n,stop,z->{for(int x=0;x<n;x++){int i=z*n+x;if(base.waterY(i,sea)>Math.round(base.height[i]))continue;double cold=climate==null?1:EnvironmentNodes.clamp((.65-EnvironmentNodes.temperature(climate,i,base.height[i],sea))*3,0,1);boolean zoned=zones&&base.zoneSlope!=null;double slope=zoned?base.zoneSlope[i]:EnvironmentNodes.slope(base.height,i,n,size),line=node.p("line");if(zoned)line=MountainZones.snowline(line,ox+x*block,oz+z*block,seed,base.zoneNorth[i]);e.snow[i]=cover(base.height[i],slope*4/Math.max(1,node.p("slope")),cold,ox+x*block,oz+z*block,seed,line,node.p("transition"),node.p("patch"));if(base.material!=null&&base.material[i]==6&&EnvironmentMap.at(base.glacier,i,0)>0&&base.height[i]<line+90+TerraForge.sample((ox+x*block)/40,(oz+z*block)/40,seed+8111)*60)e.snow[i]=0;/* bare ice on the lower glacier */}});
   return e;

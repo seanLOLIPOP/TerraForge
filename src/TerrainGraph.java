@@ -77,7 +77,9 @@ final class TerrainGraph {
         if(node.type==Type.TREES){EnvironmentMap env=TreeLibrary.scatter(node,base,inputs[1],n,worldSize,sea,seed,cancelled);cache.put(id,env.height);envs.put(id,env);return env.height;}
         if(EnvironmentNodes.handles(node.type)){EnvironmentMap climate=node.input.length>1&&node.input[1]>=0?envs.get(node.input[1]):null;EnvironmentMap env=EnvironmentNodes.apply(node,base,climate,n,worldSize,sea,seed,cancelled);if(climate!=null){env.temperature=climate.temperature;env.rain=climate.rain;}float[] data=EnvironmentNodes.field(node.type,env,n,sea);cache.put(id,data);envs.put(id,env);return data;}
         float[] out=new float[n*n];Type type=node.type;float[] seaDistance=type==Type.MOUNTAIN&&node.p("coastalReach")>0?EnvironmentNodes.distanceToSea(inputs[0],n,sea,cancelled):null;
-        if(type==Type.HYDRAULIC)out=HydraulicErosion.apply(inputs[0],n,worldSize,sea,node,seed,cancelled);
+        if(GpuGeneration.generate(node,n,sea,seed,out,cancelled)){}
+        else if(GpuNodes.apply(node,inputs,out,n,worldSize,sea,seed,seaDistance,cancelled)){}
+        else if(type==Type.HYDRAULIC)out=HydraulicErosion.apply(inputs[0],n,worldSize,sea,node,seed,cancelled);
         else if(type==Type.EROSION){TerraForge.World w=new TerraForge.World(n,sea,seed);w.height=inputs[0].clone();ThermalErosion.apply(w,(int)node.p("iterations"),cancelled);out=w.height;}
         else {final float[] output=out;CpuWork.rows(n,n,cancelled,z->{for(int x=0;x<n;x++){int i=z*n+x;double a=inputs.length>0&&inputs[0]!=null?inputs[0][i]:0,value=0;
             switch(type){

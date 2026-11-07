@@ -10,6 +10,7 @@ $stage = Join-Path $root ('dist/windows-' + [guid]::NewGuid().ToString('N'))
 $inputDir = Join-Path $stage 'input'
 New-Item -ItemType Directory -Path "$inputDir/lib/licenses" -Force | Out-Null
 Copy-Item -LiteralPath "$root/TerraForge.jar" -Destination $inputDir
+Copy-Item -LiteralPath "$root/lib/lwjgl-opencl-3.3.6.jar" -Destination "$inputDir/lib/"
 foreach ($module in @('lwjgl','lwjgl-glfw','lwjgl-opengl')) {
     foreach ($suffix in @('', '-natives-windows')) {
         $name = "$module-3.3.6$suffix.jar"

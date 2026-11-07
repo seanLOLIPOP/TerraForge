@@ -7,3 +7,5 @@
 - Minecraft is a trademark of Mojang/Microsoft. Minecraft game binaries and textures are not bundled.
 
 Application source is provided for viewing and building. No additional open-source license is asserted for the application in this initial release.
+
+- LWJGL OpenCL 3.3.6 Java bindings are distributed under the same LWJGL license in lib/licenses/. The JAR was downloaded from Maven Central (org.lwjgl:lwjgl-opencl:3.3.6) and its upstream SHA-1 was verified. OpenCL drivers/runtimes are supplied by the user's GPU vendor and are not bundled.
