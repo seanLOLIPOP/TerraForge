@@ -12,7 +12,7 @@ import java.util.zip.*;
 /** Standalone terrain painter and Minecraft Java 1.20.4 exporter. */
 public class TerraForge extends JFrame {
     private static final long serialVersionUID=2L;
-    static final String VERSION="0.1.15";
+    static final String VERSION="0.1.16";
     static class World {
         int size,sea,buildHeight=384,exportSpawnX=-1,exportSpawnY=-1,exportSpawnZ=-1; long seed; float[] height; byte[] material;EnvironmentMap environment;int[] treeHeights;
         TerrainGraph graph;TerrainGenerator.Settings settings=TerrainGenerator.Settings.legacy();
@@ -172,6 +172,7 @@ public class TerraForge extends JFrame {
     static byte[] chunk(World w,int cx,int cz,TreeLibrary.SpatialIndex forest,int originX,int originZ)throws IOException{int[] treeBlocks=w.environment.trees.isEmpty()?null:forest.overlay(cx,cz);
         int[] columnSoil=new int[256],columnHeight=new int[256],columnSurface=new int[256],columnWater=new int[256],columnSnow=new int[256],columnIce=new int[256],columnGlacier=new int[256];
         for(int z=0;z<16;z++)for(int x=0;x<16;x++){int index=z*16+x,wx=cx*16+x,wz=cz*16+z;columnSoil[index]=ExportBlocks.soilDepth(wx+originX,wz+originZ,w.seed);columnHeight[index]=w.h(wx,wz);columnSurface[index]=TerrainGenerator.surface(w,wx,wz);columnWater[index]=w.waterY(wx,wz);columnSnow[index]=w.snowLayers(wx,wz);columnIce[index]=w.iceDepth(wx,wz);columnGlacier[index]=(int)Math.ceil(EnvironmentMap.at(w.environment.glacier,wz*w.size+wx,0));}
+        ExportBlocks.Column[] blockColumns=new ExportBlocks.Column[256];for(int z=0;z<16;z++)for(int x=0;x<16;x++){int i=z*16+x;blockColumns[i]=new ExportBlocks.Column(columnHeight[i],columnSurface[i],columnWater[i],columnSnow[i],columnIce[i],columnGlacier[i],columnSoil[i],cx*16+x+originX,cz*16+z+originZ,w.seed);}
         int[] decorLow=new int[256],decorHigh=new int[256];
         if(groundCover){GroundCover.Ground ground=new GroundCover.Ground(){public int height(int x,int z){return x<0||z<0||x>=w.size||z>=w.size?Integer.MIN_VALUE:w.h(x,z);}public int material(int x,int z){return TerrainGenerator.surface(w,x,z);}};
             for(int z=0;z<16;z++)for(int x=0;x<16;x++){int index=z*16+x,wx=cx*16+x,wz=cz*16+z,h=columnHeight[index];
@@ -181,7 +182,7 @@ public class TerraForge extends JFrame {
         List<Map<String,Tag>> sections=new ArrayList<>();Map<String,Tag> biomeData=biomeStates(w,cx,cz);
         int minSolid=Integer.MAX_VALUE,maxTop=-64;for(int index=0;index<256;index++){minSolid=Math.min(minSolid,columnHeight[index]-Math.max(Math.max(ExportBlocks.surfaceDepth(columnSurface[index]),columnHeight[index]>ExportBlocks.STRATA_FLOOR?ExportBlocks.STRATA_DEPTH:0),columnGlacier[index]));maxTop=Math.max(maxTop,Math.max(columnWater[index],columnHeight[index]+(columnSnow[index]>0?1:0)+(decorHigh[index]!=0?2:decorLow[index]!=0?1:0)));}if(treeBlocks!=null)for(int yy=w.buildHeight-65;yy>=-64;yy--){boolean found=false;for(int index=0;index<256;index++)if(treeBlocks[(yy+64)*256+index]!=0){maxTop=Math.max(maxTop,yy);found=true;break;}if(found)break;}
         for(int sy=-4;sy<w.buildHeight/16-4;sy++){int uniform=sy*16>maxTop?0:sy>-4&&sy*16+15<minSolid?(sy<0?2:3):-1;if(uniform>=0){sections.add(tags("Y",b(sy),"block_states",compound(tags("palette",list(10,List.of(tags("Name",str("minecraft:"+blocks[uniform])))))),"biomes",compound(biomeData)));continue;}int[] vals=new int[4096];for(int y=0;y<16;y++)for(int z=0;z<16;z++)for(int x=0;x<16;x++){int index=z*16+x,h=columnHeight[index],yy=sy*16+y,mat=columnSurface[index],water=columnWater[index],snow=columnSnow[index],ice=columnIce[index],v=0;
-            v=ExportBlocks.block(h,mat,water,snow,ice,columnGlacier[index],yy,columnSoil[index],cx*16+x+originX,cz*16+z+originZ,w.seed);
+            v=blockColumns[index].block(yy);
             if(treeBlocks!=null&&treeBlocks[(yy+64)*256+z*16+x]!=0)v=treeBlocks[(yy+64)*256+z*16+x];else if(v==0&&yy==h+1&&decorLow[index]!=0)v=decorLow[index];else if(v==0&&yy==h+2&&decorHigh[index]!=0&&(treeBlocks==null||treeBlocks[(yy-1+64)*256+z*16+x]==0))v=decorHigh[index];vals[y*256+z*16+x]=v;
         }
         BlockPalette used=BlockPalette.begin();for(int a=0;a<vals.length;a++)vals[a]=used.index(vals[a]);List<Map<String,Tag>> palette=new ArrayList<>();for(int entry=0;entry<used.size;entry++){int id=used.ids[entry];Map<String,Tag> block=id>=GroundCover.BASE?GroundCover.stateTag(id):id>=1000000?tags("Name",str("minecraft:"+RiverBanks.EXTRA_BLOCKS[id-1000000])):id>=22?TreeLibrary.stateTag(id):tags("Name",str("minecraft:"+(id==21?"grass_block":id>=13?"snow":blocks[id])));if(id==5||id==21)block.put("Properties",compound(tags("snowy",str(id==21?"true":"false"))));if(id==7)block.put("Properties",compound(tags("level",str("0"))));if(id>=13&&id<=20)block.put("Properties",compound(tags("layers",str(Integer.toString(id-12)))));palette.add(block);}Map<String,Tag> states=tags("palette",list(10,palette));if(used.size>1){states.put("data",new Tag(12,pack(vals,Math.max(4,32-Integer.numberOfLeadingZeros(used.size-1)))));}

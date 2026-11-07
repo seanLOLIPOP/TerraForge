@@ -1,17 +1,17 @@
-# TerraForge v0.1.15
+# TerraForge v0.1.16
 
 Standalone terrain editor and Minecraft Java Edition 1.20.4 world exporter for Linux, macOS, and Windows.
 
-v0.1.15 speeds up Minecraft chunk encoding with reusable primitive block palettes
-and faster block-state packing. In local tests, warmed full-world export improved
-34–38%; results depend on the graph and hardware. See
-[encoding validation](docs/BLOCK-ENCODING-VALIDATION.md) for measurements and checks.
+v0.1.16 reuses column rock noise, skips detailed block calculations in plain
+underground and empty sky, reuses tree water-distance fields, and reduces river
+routing overhead. These shared optimizations apply to every map; speed gains
+depend on its terrain and nodes. See [generation validation](docs/GENERATION-REUSE-VALIDATION.md).
 
 ## Windows portable edition
 
 [Published Windows releases](https://github.com/seanLOLIPOP/TerraForge/releases)
 
-Extract `TerraForge-v0.1.15-Windows-x64.zip` completely and open `TerraForge.exe`.
+Extract `TerraForge-v0.1.16-Windows-x64.zip` completely and open `TerraForge.exe`.
 The Windows x64 package includes Java 21 and Windows LWJGL natives. No Java install
 or administrator rights are needed. GPU views require OpenGL 3.3 graphics drivers.
 Minecraft saves default to `%APPDATA%\.minecraft\saves`. Run

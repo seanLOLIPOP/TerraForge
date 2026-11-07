@@ -16,15 +16,38 @@ final class ExportBlocks {
         return rock?strata(x,y,z,seed):v;
     }
     static int strata(int x,int y,int z,long seed){
-        double drift=y/40.0,w=(TerraForge.sample(x/70.,z/70.,seed+6101)-.5)*24;
+        return strata(x,y,z,seed,(TerraForge.sample(x/70.,z/70.,seed+6101)-.5)*24,TerraForge.sample(x/520.,z/520.,seed+6113));
+    }
+    private static int strata(int x,int y,int z,long seed,double w,double region){
+        double drift=y/40.0;
         double r=.6*TerraForge.sample((x+w)/26.+drift*.7,(z-w)/26.-drift*.4,seed+6109)+.4*TerraForge.sample(x/9.+drift,z/9.,seed+6111);
-        double region=TerraForge.sample(x/520.,z/520.,seed+6113);
         if(r<.45)return 3;
         if(r<.6)return 1000002;/* andesite */
         if(r<.7)return 1000009;/* tuff */
         if(r<.77)return region>.5?1000008:1000007;/* granite or diorite, by region */
         if(r<.82&&y<260)return 2;/* deepslate low in the range */
         return 3;
+    }
+    /** Per-column invariants, shared by all sections of a chunk. No world-global cache. */
+    static final class Column {
+        final int h,mat,water,snow,ice,glacier,soil,x,z,solidBelow,airAbove;
+        final long seed;
+        private boolean cached;
+        private double warp,region;
+        Column(int h,int mat,int water,int snow,int ice,int glacier,int soil,int x,int z,long seed){
+            this.h=h;this.mat=mat;this.water=water;this.snow=snow;this.ice=ice;this.glacier=glacier;this.soil=soil;this.x=x;this.z=z;this.seed=seed;
+            solidBelow=h-Math.max(Math.max(mountainRock(mat)?48:soil,mat==6?Math.max(4,glacier):0),h>STRATA_FLOOR?STRATA_DEPTH:0);
+            airAbove=Math.max(h+1,water);
+        }
+        int block(int y){
+            if(y==-64)return 1;
+            if(y<solidBelow)return y<0?2:3;
+            if(y>airAbove)return 0;
+            int value=ExportBlocks.block(h,mat,water,snow,ice,glacier,y,soil);
+            if(y>=h||y<=STRATA_FLOOR||y<h-STRATA_DEPTH||!(value==3||mountainRock(mat)&&value>=1000000))return value;
+            if(!cached){warp=(TerraForge.sample(x/70.,z/70.,seed+6101)-.5)*24;region=TerraForge.sample(x/520.,z/520.,seed+6113);cached=true;}
+            return strata(x,y,z,seed,warp,region);
+        }
     }
     static int block(int h,int mat,int water,int snow,int ice,int glacier,int y,int soilDepth){
   if(y==-64)return 1;

@@ -1,4 +1,4 @@
-TerraForge 0.1.15 - Windows x64 portable edition
+TerraForge 0.1.16 - Windows x64 portable edition
 
 Extract the entire ZIP to a writable folder, then open TerraForge.exe.
 Java 21 is included. No Java installation or administrator access is required.
@@ -55,6 +55,11 @@ GPU info shows the selected backend. GPU acceleration requires an OpenCL 1.2
 driver with double precision; unsupported devices automatically use the CPU.
 No CUDA toolkit is required. First use includes shader compilation.
 
-Version 0.1.15 keeps connected terrain stages on the GPU and combines compatible
-node passes during builds. Use Generation: Auto for the recommended balance.
+Connected terrain stages stay on the GPU and compatible node passes are combined
+during builds. Use Generation: Auto for the recommended balance.
 CPU-only stages and saving still use the CPU. First use compiles GPU programs.
+
+Version 0.1.16 adds shared CPU optimizations for all maps: column rock-noise reuse,
+plain underground/empty sky shortcuts, tree water-distance reuse, and faster river
+routing. Single-region builds can use multiple terrain workers when RAM limits
+region concurrency. These improvements are automatic; gains vary by map.

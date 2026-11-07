@@ -22,7 +22,7 @@ final class CpuWork {
         var pool=Executors.newFixedThreadPool(Math.min(count,threads),r->{var thread=new Thread(r,"TerraForge-region-"+IDS.incrementAndGet());thread.setDaemon(true);return thread;});
         var jobs=new java.util.ArrayList<Future<?>>();boolean interrupted=false;
         try{
-            for(int i=0;i<count;i++){int index=i;jobs.add(pool.submit(()->{if(stop.getAsBoolean()||Thread.currentThread().isInterrupted())throw new CancellationException();region(()->job.accept(index));return null;}));}
+            for(int i=0;i<count;i++){int index=i;jobs.add(pool.submit(()->{if(stop.getAsBoolean()||Thread.currentThread().isInterrupted())throw new CancellationException();if(Math.min(count,threads)==1)job.accept(index);else region(()->job.accept(index));return null;}));}
             pool.shutdown();for(var task:jobs)task.get();
         }catch(InterruptedException error){interrupted=true;throw new CancellationException();}
         catch(ExecutionException error){if(error.getCause() instanceof Exception cause)throw cause;throw new IllegalStateException(error.getCause());}
