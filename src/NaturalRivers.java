@@ -36,7 +36,7 @@ final class NaturalRivers{
   if(courses&&n==size)e.resolvedRiverChannels=true;
   int firstSegment=e.ribbons==null?0:e.ribbons.segments.size();
   e.ribbons=(e.ribbons==null?new RiverRibbon.Network(List.of()):e.ribbons).append(ribbon,depth,seed,steering,n,block,terrainFollow,courses,strength);
-  if(courses)RiverChannels.carve(e,original,e.ribbons.segments,firstSegment,n,size,sea,stop);
+  if(courses){RiverChannels.carve(e,original,e.ribbons.segments,firstSegment,n,size,sea,stop);e.riverNetworkCells=new BitSet(n*n);for(int i=0;i<n*n;i++)if(e.river[i]>.05&&e.waterY(i,sea)>Math.round(e.height[i]))e.riverNetworkCells.set(i);}
  }
  static double[] safe(double x,double z,double[] anchor,float[] terrain,float[] spill,int n,boolean courses,double block,double maximumSlope){
   double[] point=safe(x,z,anchor,terrain,spill,n,courses);if(!courses)return point;

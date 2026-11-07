@@ -40,7 +40,7 @@ final class MountainRiverForks {
  static RiverRibbon.Point last(List<RiverRibbon.Point> p){return p.get(p.size()-1);}
  static void generate(TerrainGraph.Node node,EnvironmentMap e,float[] original,EnvironmentNodes.Drainage drainage,int n,int size,int sea,long seed,double nominalRadius,BooleanSupplier stop){
   int wanted=(int)node.p("mountainForks");if(wanted==0||e.ribbons==null||e.ribbons.segments.isEmpty())return;double block=size/(double)n;var base=e.ribbons;var candidates=new ArrayList<Source>();
-  var space=node.p("branchReach")>0?new RiverBranchSpace(base):null;var groups=new LinkedHashMap<Integer,List<Source>>();int group=0;RiverRibbon.Point previous=null;
+  var space=new RiverBranchSpace(base);var groups=new LinkedHashMap<Integer,List<Source>>();int group=0;RiverRibbon.Point previous=null;
   for(int k=0;k<base.segments.size();k++){var segment=base.segments.get(k);var p=segment.a();if(previous!=null&&Math.hypot(previous.x()-p.x(),previous.z()-p.z())>.1)group++;previous=segment.b();if(k%3!=0||p.water()<sea+5||RiverCourse.terrainSlope(original,n,p.x()/block,p.z()/block,block)>(node.p("watershed")>.5?.28:node.p("maxSlope"))||Math.abs(RiverShape.height(original,n,p.x()/block,p.z()/block)-p.water())>5)continue;groups.computeIfAbsent(group,key->new ArrayList<>()).add(new Source(p,Math.atan2(segment.b().z()-p.z(),segment.b().x()-p.x()),group));}
   var random=new Random(seed+76421);for(var list:groups.values()){Collections.shuffle(list,random);if(node.p("watershed")>.5)list.sort(Comparator.comparingDouble((Source source)->source.point().water()).reversed());}
   for(int round=0;;round++){boolean added=false;for(var list:groups.values())if(round<list.size()){candidates.add(list.get(round));added=true;}if(!added)break;}

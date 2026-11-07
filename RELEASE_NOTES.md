@@ -1,3 +1,13 @@
+# TerraForge v0.1.22 - Branching rivers and natural endings
+
+- Compatible river intersections become endpoint junctions instead of X crossings.
+- Recursive fork generation always uses shared channel clearance; side branches
+  check their paths and accepted siblings, not just endpoint clearance.
+- Optional natural branch endings mix terminal lakes with tapered seasonal beds.
+- Natural side branches follow gentle downhill terrain with varied headings.
+- Ending metadata survives water remaps and renders in both layout and regions.
+- New build-folder revision prevents resuming old channel geometry.
+
 # TerraForge v0.1.21 - Fix straight rivers
 
 - Drainage-first rivers now carve the final shaped centerline in direct builds

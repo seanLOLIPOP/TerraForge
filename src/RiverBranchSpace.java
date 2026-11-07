@@ -4,7 +4,7 @@ final class RiverBranchSpace{
  record Entry(RiverRibbon.Point a,RiverRibbon.Point b,int owner,double arc){}
  record Contact(RiverRibbon.Point point,double clearance,int owner,boolean wet){}
  final Map<Long,List<Entry>> cells=new HashMap<>();final Map<Integer,Double> wetEnds=new HashMap<>();final Set<Integer> retired=new HashSet<>();int next=1;
- RiverBranchSpace(RiverRibbon.Network network){for(var s:network.segments)add(s.a(),s.b(),0,0);}
+ RiverBranchSpace(RiverRibbon.Network network){for(var s:network.segments)add(s.a(),s.b(),0,0);for(var branch:network.sideBranches){int owner=owner();double arc=0,total=0;for(int i=1;i<branch.points().size();i++)total+=Math.hypot(branch.points().get(i).x()-branch.points().get(i-1).x(),branch.points().get(i).z()-branch.points().get(i-1).z());for(int i=1;i<branch.points().size();i++){var a=branch.points().get(i-1);var b=branch.points().get(i);add(a,b,owner,arc);arc+=Math.hypot(b.x()-a.x(),b.z()-a.z());}wetEnd(owner,total*branch.wetFraction());}}
  static long key(int x,int z){return ((long)x<<32)^(z&0xffffffffL);}
  int owner(){return next++;}void retire(int owner){retired.add(owner);}
  void wetEnd(int owner,double arc){wetEnds.put(owner,arc);}
