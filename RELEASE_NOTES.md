@@ -1,3 +1,13 @@
+# TerraForge v0.1.21 - Fix straight rivers
+
+- Drainage-first rivers now carve the final shaped centerline in direct builds
+  and coarse layouts, matching the geometry used for regional refinement.
+- Final terrain-checked spline interpolation rounds drainage-first river corners.
+- Local bend fitting prevents blocked points from shrinking a whole river reach.
+- Natural channel curves now scales drainage-first meanders. Zero disables added
+  meanders; new river nodes default to 1. Existing saved values are retained.
+- Sources, junctions, and outlets stay anchored; terrain checks constrain bends.
+
 # TerraForge v0.1.20 - Lakes that follow the landscape
 
 - Valley-following lake outlines favor low ground and stop against high ridges.

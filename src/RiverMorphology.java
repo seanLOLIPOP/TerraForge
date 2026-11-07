@@ -7,7 +7,7 @@ final class RiverMorphology {
   List<RiverRibbon.Point> points=new ArrayList<>();points.add(path.get(0));double until=8;var previous=path.get(0);
   for(int k=1;k<path.size();k++){var next=path.get(k);double length=Math.hypot(next.x()-previous.x(),next.z()-previous.z());while(length>=until&&length>.001){previous=RiverRibbon.lerp(previous,next,until/length);points.add(previous);length=Math.hypot(next.x()-previous.x(),next.z()-previous.z());until=8;}until-=length;previous=next;}
   var end=path.get(path.size()-1);if(Math.hypot(end.x()-points.get(points.size()-1).x(),end.z()-points.get(points.size()-1).z())>.01)points.add(end);
-  points=broadCurves(points,terrain,n,block,sweep);points=meanders(points,terrain,n,block,seed);
+  points=broadCurves(points,terrain,n,block,sweep);points=meanders(points,terrain,n,block,seed,sweep);
   var anchor=List.copyOf(points);
   for(int pass=0;pass<12;pass++){var next=new ArrayList<RiverRibbon.Point>();next.add(points.get(0));for(int i=1;i<points.size()-1;i++){var a=points.get(i-1);var b=points.get(i);var c=points.get(i+1);double dx=c.x()-a.x(),dz=c.z()-a.z(),len=Math.max(.001,Math.hypot(dx,dz)),nx=-dz/len,nz=dx/len;
     double gradient=Math.max(0,(a.water()-c.water())/len),m=RiverCourse.maturity(b.water(),LargeWorldBuilder.SEA,gradient,i/(double)points.size());
@@ -45,8 +45,9 @@ final class RiverMorphology {
 
     /** Seeded lateral meanders for reaches the drainage grid left straight. Bends scale with channel width,
      *  grow with river maturity, fade at sources and junctions, and never climb out of the valley floor. */
-    static List<RiverRibbon.Point> meanders(List<RiverRibbon.Point> input,float[] terrain,int n,double block,long seed){
-        int count=input.size();if(count<8||terrain==null)return input;
+    static List<RiverRibbon.Point> meanders(List<RiverRibbon.Point> input,float[] terrain,int n,double block,long seed){return meanders(input,terrain,n,block,seed,1);}
+    static List<RiverRibbon.Point> meanders(List<RiverRibbon.Point> input,float[] terrain,int n,double block,long seed,double strength){
+        int count=input.size();if(count<8||terrain==null||strength<=0)return input;
         double[] arc=new double[count];for(int i=1;i<count;i++)arc[i]=arc[i-1]+Math.hypot(input.get(i).x()-input.get(i-1).x(),input.get(i).z()-input.get(i-1).z());
         double total=arc[count-1];if(total<96)return input;
         double[] nx=new double[count],nz=new double[count],offset=new double[count];
@@ -72,21 +73,22 @@ final class RiverMorphology {
             double broadLength=Math.max(900,Math.min(2600,total/1.5)),broadAmplitude=Math.min(150,total*.09),bt=arc[i]/broadLength;
             double broad=Math.sin((bt+.6*(TerraForge.sample(bt*.5,6.5,seed+77043)-.5))*Math.PI*2)*(.6+.4*TerraForge.sample(bt*.4,8.5,seed+77047));
             double broadFade=TerraForge.smooth(Math.min(1,Math.min(arc[i],total-arc[i])/(broadLength*.25)));
-            offset[i]=wave*amplitude*fade+broad*broadAmplitude*broadFade;
+            offset[i]=(wave*amplitude*fade+broad*broadAmplitude*broadFade)*Math.min(2,strength);
         }
         // Fit a smooth amplitude envelope: wherever a bend would leave the valley floor or climb a steep face,
         // shrink the envelope locally and re-smooth, so bends narrow gradually instead of jittering point by point.
-        double[] envelope=new double[count];java.util.Arrays.fill(envelope,1);double[] raw=offset.clone();
-        for(int round=0;round<8;round++){
-            offset=gaussian(multiply(raw,envelope),5);
-            boolean changed=false;
-            for(int i=0;i<count;i++){if(!valid(input.get(i),nx[i],nz[i],offset[i],terrain,n,block)){envelope[i]*=.55;changed=true;}}
-            if(!changed)break;
-            envelope=gaussian(minimum(envelope,4),3);
+        double[] cap=new double[count],envelope=new double[count];double[] raw=offset.clone();
+        for(int i=0;i<count;i++){
+            double fit=1;for(int attempt=0;attempt<24&&!valid(input.get(i),nx[i],nz[i],raw[i]*fit,terrain,n,block);attempt++)fit*=.75;
+            cap[i]=envelope[i]=fit;
         }
-        offset=gaussian(multiply(raw,envelope),5);
-        for(int i=0;i<count;i++)for(int k=0;k<6&&!valid(input.get(i),nx[i],nz[i],offset[i],terrain,n,block);k++)offset[i]*=.6;
-        offset=gaussian(offset,2);
+        // Fit locally: a blocked bend limits its neighbors without repeatedly shrinking an entire reach.
+        for(int round=0;round<8;round++){double[] smooth=gaussian(envelope,3);for(int i=0;i<count;i++)envelope[i]=Math.min(cap[i],smooth[i]);}
+        offset=gaussian(multiply(raw,envelope),2);
+        for(int i=0;i<count;i++){
+            for(int attempt=0;attempt<32&&!valid(input.get(i),nx[i],nz[i],offset[i],terrain,n,block);attempt++)offset[i]*=.8;
+            if(!valid(input.get(i),nx[i],nz[i],offset[i],terrain,n,block))offset[i]=0;
+        }
         offset[0]=0;offset[count-1]=0;
         var result=new ArrayList<RiverRibbon.Point>(count);
         for(int i=0;i<count;i++){var b=input.get(i);result.add(new RiverRibbon.Point(b.x()+nx[i]*offset[i],b.z()+nz[i]*offset[i],b.radius(),b.water(),b.discharge()));}
@@ -94,6 +96,7 @@ final class RiverMorphology {
     }
 
     static boolean valid(RiverRibbon.Point b,double nx,double nz,double offset,float[] terrain,int n,double block){
+        double targetX=b.x()+nx*offset,targetZ=b.z()+nz*offset;if(targetX<0||targetZ<0||targetX>(n-1)*block||targetZ>(n-1)*block)return false;
         if(Math.abs(offset)<.5)return true;
         double base=RiverShape.height(terrain,n,b.x()/block,b.z()/block),slope=RiverCourse.terrainSlope(terrain,n,b.x()/block,b.z()/block,block);
         int samples=Math.max(2,(int)Math.ceil(Math.abs(offset)/block*3));
