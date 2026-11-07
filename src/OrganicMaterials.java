@@ -30,8 +30,9 @@ final class OrganicMaterials {
    e.material[i]=(byte)mat;
    double snow=EnvironmentMap.at(base.snow,i,0);if(snow>0){double retention=1-TerraForge.smooth(EnvironmentNodes.clamp((slope-.45)/1.2,0,1));double organic=EnvironmentNodes.clamp(snow+(p-.5)*.55+(d-.5)*.12,0,1);e.snow[i]=underwater?0:(float)(organic*retention);}
   }});
-  if(node.p("zones")>.5)return MountainZones.apply(node,e,n,size,sea,seed,ox,oz,stop);
-  return e;
+  var result=node.p("zones")>.5?MountainZones.apply(node,e,n,size,sea,seed,ox,oz,stop):e;
+  RealisticLakes.finishMaterials(result,sea,stop);
+  return result;
  }
     /** Beach band along the shore. Width follows "Beach width" and wanders between sheltered coves and narrow
      *  headlands with "Beach width variation"; "Dune transition" adds a patchy sand-into-grass zone behind it.

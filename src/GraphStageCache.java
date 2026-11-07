@@ -25,7 +25,7 @@ final class GraphStageCache {
         while(bytes+cost>limit&&!CACHE.isEmpty()){var iterator=CACHE.entrySet().iterator();bytes-=iterator.next().getValue().bytes;iterator.remove();}
         CACHE.put(key,new Entry(snapshot(environment),cost));bytes+=cost;
     }
-    private static long weight(EnvironmentMap e){var seen=Collections.newSetFromMap(new IdentityHashMap<float[],Boolean>());long size=0;for(float[] a:new float[][]{e.height,e.water,e.snow,e.ice,e.temperature,e.rain,e.river,e.glacier,e.zoneSlope,e.zoneNorth,e.zoneBowl,e.moisture,e.riverGrad,e.riverCatchment,e.shoreDistance})if(a!=null&&seen.add(a))size+=a.length*4L;return size+e.height.length*2L+(e.riverFlow==null?0:e.riverFlow.discharge().length*8L);}
+    private static long weight(EnvironmentMap e){var seen=Collections.newSetFromMap(new IdentityHashMap<float[],Boolean>());long size=0;for(float[] a:new float[][]{e.height,e.water,e.snow,e.ice,e.temperature,e.rain,e.river,e.glacier,e.zoneSlope,e.zoneNorth,e.zoneBowl,e.moisture,e.riverGrad,e.riverCatchment,e.shoreDistance})if(a!=null&&seen.add(a))size+=a.length*4L;return size+(e.lakeBank==null?0:e.lakeBank.length)+e.height.length*2L+(e.riverFlow==null?0:e.riverFlow.discharge().length*8L);}
     static synchronized long hits(){return hits;}
     static synchronized void clear(){CACHE.clear();bytes=0;hits=0;}
 }

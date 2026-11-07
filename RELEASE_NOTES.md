@@ -1,3 +1,13 @@
+# TerraForge v0.1.20 - Lakes that follow the landscape
+
+- Valley-following lake outlines favor low ground and stop against high ridges.
+- Maximum ridge cut limits carving outside the seed basin.
+- Bounded, varied bank blending preserves steep shore faces and mixes sand,
+  gravel, exposed rock, and damp-soil deposits according to slope and rainfall.
+- Lake shore deposits survive the final material pass, cache snapshots, and
+  sampling into regional builds. Snow, ice, glaciers, and river cells retain priority.
+- New controls default off for compatibility with existing graphs.
+
 # TerraForge v0.1.19 - Irregular natural lakes
 
 - Opt-in non-round lake outlines: broad bays, headlands, and smaller shoreline

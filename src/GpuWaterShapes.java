@@ -23,6 +23,7 @@ int count=n*n;double cx=P(centerX),cz=P(centerZ),radius=P(cellRadius),level=P(le
                 if(P(realistic)>.5){double broad=sampleNoise(dx*2.8+83,dz*2.8+37,seed+((ulong)P(nodeId))*151L),detail=sampleNoise(dx*9+23,dz*9+67,seed+((ulong)P(nodeId))*157L);shore*=1+P(bays)*(broad-.5)*.9+P(shoreDetail)*(detail-.5)*.3;}
                 d/=shore;
                 if(P(terrainFit)>0){double uphill=curve(fclamp((A[i]-level-12)/180,0,1));d*=1+P(terrainFit)*uphill*.85*curve(fclamp(d/.8,0,1));}
+                if(P(realistic)>.5&&P(valleyFollow)>0){double follow=P(valleyFollow),low=curve(fclamp((level+12-A[i])/(depth+24),0,1)),high=curve(fclamp((A[i]-level-4)/P(ridgeCut),0,1));d*=1-follow*.35*low+follow*.85*high;if(A[i]>level+P(ridgeCut)/fmax(.1,follow)&&d>.25)d=fmax(d,1.35);}
                 if(d<1.35){
                     double bedNoise=sampleNoise(dx*2+19,dz*2+31,seed+((ulong)P(nodeId))*73L);
                     double bowl=level-.6-depth*pow(fmax(0,1-d*d),1.35)*(.8+.3*bedNoise);
