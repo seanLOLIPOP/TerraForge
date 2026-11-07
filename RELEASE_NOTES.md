@@ -1,3 +1,12 @@
+# TerraForge v0.1.26 - Open river mouths through beaches
+
+- Carve sea-level river reaches instead of stopping them above the coastline.
+- Apply the fix to whole-map layouts, direct generation and detailed regions.
+- Dry beach cells at exactly sea level are carved; already submerged ocean beds
+  and protected lakes remain intact.
+- Keep intentional lake and seasonal endings; no forced extensions are added.
+- Start a fresh build to regenerate existing river mouths.
+
 # TerraForge v0.1.25 - River bank collision checks
 
 - Merge incoming channels on bank contact, including contacts near their source.

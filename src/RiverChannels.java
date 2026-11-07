@@ -17,7 +17,7 @@ final class RiverChannels {
                 double radius=Math.max(.65,(a.radius()+(b.radius()-a.radius())*t)/block),distance=Math.hypot(x-ax-dx*t,z-az-dz*t),bank=radius*2+1;
                 if(distance>radius+bank)continue;
                 float water=(float)Math.max(sea,Math.floor(a.water()+(b.water()-a.water())*t));
-                if(water<=sea)continue;
+                // A tidal river at sea level still needs a bed through dry beach.
                 if(distance<=radius){
                     double f=distance/radius,depth=Math.max(1,s.depth()*(1-f*f));
                     boolean reservoir=e.water[i]>original[i]+s.depth()+2;
