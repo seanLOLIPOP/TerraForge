@@ -1,3 +1,11 @@
+# TerraForge v0.1.23 - Show river forks in the whole-map layout
+
+- Fix missing fork channels in coarse layouts and unexplored whole-map areas.
+- Recursive and alpine branch segments are now carved at the layout resolution
+  after generation, using their world coordinates.
+- Existing detailed branch geometry and direct-build carving are retained.
+- New working-folder revision prevents reusing old incomplete overview data.
+
 # TerraForge v0.1.22 - Branching rivers and natural endings
 
 - Compatible river intersections become endpoint junctions instead of X crossings.
